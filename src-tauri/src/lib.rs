@@ -1,4 +1,5 @@
 mod backup;
+mod content;
 mod diary;
 mod planner;
 mod time;
@@ -147,6 +148,10 @@ pub fn run() {
             backup::backup_database,
             backup::restore_database,
             planner::evaluate_scenario,
+            content::active_package,
+            content::import_package,
+            content::list_packages,
+            content::activate_package,
             planner::save_plan,
             planner::list_plans,
             planner::create_trip_from_plan

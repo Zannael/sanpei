@@ -8,7 +8,7 @@
 - Diario iniziale: creazione/elenco uscite, canne, intervalli, catture, esito incompleto/zero/catture. I vincoli SQL vietano intervalli sovrapposti sulla stessa canna. Si possono registrare osservazioni datate, modificare o eliminare un’uscita ed eliminare singoli elementi con conferma. Gli intervalli distinguono pause, minuti con esca inefficace e tempo effettivo, che resta sconosciuto se mancano dati. Postazione e zona di lancio hanno coordinate personali, origine e accuratezza; la mappa regionale non verifica i dettagli. Mancano modifica dei singoli elementi, allegati e aggregati dello sforzo.
 - Sei schede sintetiche preliminari in `content/lazio-rigs.v1.json`. Non sono un pacchetto scientifico completo né validato, e non includono tutte le misure.
 - Richiesta esplicita a Open-Meteo per meteo/mare con coordinate e cache locale. Mancano normalizzazione completa, astronomia, test del provider, gestione di tutte le finestre e attribuzioni puntuali dei modelli.
-- Il pianificatore iniziale usa poche regole operative, condizioni inserite manualmente, tecnica, settore e limite della canna; salva scenario, risultati e cataloghi come snapshot. Un piano può creare un’uscita, essere collegato al diario e registrare se è stato seguito. Si può allegare e consultare la risposta meteo/mare disponibile nello snapshot, ma non influenza le regole. Non usa ancora specie, finestre confrontate o adattamento sul posto. Importazione di nuovi pacchetti ed esportazioni non sono implementate. Copia e ripristino SQLite sono disponibili; le finestre native non sono ancora state provate nella WebView. Non dichiarare nessuna fase T0–T5 completa.
+- Il pianificatore iniziale usa poche regole operative, condizioni inserite manualmente, tecnica, settore e limite della canna; salva scenario, risultati e cataloghi come snapshot. Un piano può creare un’uscita, essere collegato al diario e registrare se è stato seguito. Si può allegare e consultare la risposta meteo/mare disponibile nello snapshot, ma non influenza le regole. Non usa ancora specie, finestre confrontate o adattamento sul posto. I pacchetti JSON Lazio dello schema 1 possono essere validati, importati, attivati e riattivati; la validazione strutturale non verifica la correttezza scientifica. Le esportazioni non sono implementate. Copia e ripristino SQLite sono disponibili; le finestre native non sono ancora state provate nella WebView. Non dichiarare nessuna fase T0–T5 completa.
 
 ## Verifiche e limiti
 
@@ -29,4 +29,8 @@ La copia usa `VACUUM INTO` in una directory temporanea privata, controlla l'inte
 
 ## Orari e piani
 
-Gli orari inseriti sono interpretati in Europe/Rome e convertiti in UTC; orari ambigui o inesistenti al cambio dell’ora vengono rifiutati. Le regole correnti sono dati incorporati nell’app, non pacchetti ancora importabili. La cronologia conserva scenario, risultato e copie delle regole, montature e settori utilizzati.
+Gli orari inseriti sono interpretati in Europe/Rome e convertiti in UTC; orari ambigui o inesistenti al cambio dell’ora vengono rifiutati. Le regole iniziali sono incorporate; i pacchetti revisionati dello schema 1 possono sostituirle e restano versionati localmente. La cronologia conserva scenario, risultato e copie delle regole, montature e settori utilizzati.
+
+## Ricerca aggiornabile
+
+Il formato e i limiti sono descritti in `docs/research-packages.md`. I test verificano rigetto di campi sconosciuti e riferimenti invalidi, importazione senza sovrascrittura, cambio delle nuove valutazioni e conservazione dei vecchi piani. La procedura verifica la struttura, non le fonti, le licenze o le conclusioni.

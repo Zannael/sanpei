@@ -1,9 +1,6 @@
 use crate::AppError;
 use serde::{Deserialize, Serialize};
 
-const RULES: &str = include_str!("../../content/rules.v1.json");
-const RIGS: &str = include_str!("../../content/lazio-rigs.v1.json");
-const SECTORS: &str = include_str!("../../content/lazio-sectors.v1.json");
 const ENGINE_VERSION: &str = "1";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Scenario {
@@ -61,7 +58,7 @@ fn invalid(message: &str) -> AppError {
         message: message.into(),
     }
 }
-fn load_rules(raw: &str) -> Result<RulePackage, AppError> {
+fn load_rules(raw: &str, catalog: &serde_json::Value) -> Result<RulePackage, AppError> {
     let pack: RulePackage =
         serde_json::from_str(raw).map_err(|_| invalid("Pacchetto di regole non valido."))?;
     if pack.schema_version != 1
@@ -71,8 +68,6 @@ fn load_rules(raw: &str) -> Result<RulePackage, AppError> {
     {
         return Err(invalid("Versione o metadati delle regole non validi."));
     }
-    let catalog: serde_json::Value =
-        serde_json::from_str(RIGS).map_err(|_| invalid("Catalogo montature non valido."))?;
     let rigs = catalog
         .get("rigs")
         .and_then(serde_json::Value::as_array)
@@ -104,7 +99,17 @@ fn load_rules(raw: &str) -> Result<RulePackage, AppError> {
     }
     Ok(pack)
 }
-fn evaluate(s: &Scenario) -> Result<Evaluation, AppError> {
+pub(crate) fn validate_rules(
+    rules: &serde_json::Value,
+    rigs: &serde_json::Value,
+) -> Result<(), AppError> {
+    let raw = serde_json::to_string(rules).map_err(|_| invalid("Regole non valide."))?;
+    load_rules(&raw, rigs).map(|_| ())
+}
+pub(crate) fn evaluate(
+    s: &Scenario,
+    bundle: &crate::content::Bundle,
+) -> Result<Evaluation, AppError> {
     if !["osservazione", "simulazione"].contains(&s.condition_origin.as_str())
         || !crate::time::valid_utc(&s.start_at, true)
         || !crate::time::valid_utc(&s.end_at, true)
@@ -125,8 +130,7 @@ fn evaluate(s: &Scenario) -> Result<Evaluation, AppError> {
     {
         return Err(invalid("Controlla tecnica, condizioni e attrezzatura."));
     }
-    let sectors: serde_json::Value =
-        serde_json::from_str(SECTORS).map_err(|_| invalid("Catalogo settori non valido."))?;
+    let sectors = &bundle.sectors;
     let sector_list = sectors
         .get("sectors")
         .and_then(serde_json::Value::as_array)
@@ -137,7 +141,9 @@ fn evaluate(s: &Scenario) -> Result<Evaluation, AppError> {
     if !s.location.is_empty() && !sector_known {
         return Err(invalid("Settore non disponibile nella ricerca."));
     }
-    let pack = load_rules(RULES)?;
+    let raw_rules =
+        serde_json::to_string(&bundle.rules).map_err(|_| invalid("Regole non valide."))?;
+    let pack = load_rules(&raw_rules, &bundle.rigs)?;
     if s.fixed_rig
         .as_ref()
         .is_some_and(|id| !pack.rules.iter().any(|r| &r.rig_id == id))
@@ -186,12 +192,16 @@ fn evaluate(s: &Scenario) -> Result<Evaluation, AppError> {
         recommendations,
         warnings,
         engine_version: ENGINE_VERSION.into(),
-        content_version: pack.content_version,
+        content_version: bundle.content_version.clone(),
     })
 }
 #[tauri::command]
-pub fn evaluate_scenario(scenario: Scenario) -> Result<Evaluation, AppError> {
-    evaluate(&scenario)
+pub async fn evaluate_scenario(
+    pool: tauri::State<'_, sqlx::SqlitePool>,
+    scenario: Scenario,
+) -> Result<Evaluation, AppError> {
+    let bundle = crate::content::active(pool.inner()).await?;
+    evaluate(&scenario, &bundle)
 }
 
 #[cfg(test)]
@@ -214,19 +224,24 @@ mod tests {
     #[test]
     fn respects_capacity_and_fixed_choice() {
         let mut s = scenario();
-        assert!(evaluate(&s).unwrap().recommendations.is_empty());
+        assert!(evaluate(&s, &crate::content::builtin().unwrap())
+            .unwrap()
+            .recommendations
+            .is_empty());
         s.casting_limit_g = Some(150.0);
         s.fixed_rig = Some("C".into());
-        let result = evaluate(&s).unwrap();
+        let result = evaluate(&s, &crate::content::builtin().unwrap()).unwrap();
         assert_eq!(result.recommendations.len(), 1);
         assert_eq!(result.recommendations[0].rig_id, "C");
     }
     #[test]
     fn unsupported_packages_are_rejected() {
-        let invalid_package = RULES.replace("\"schema_version\": 1", "\"schema_version\": 99");
-        assert!(load_rules(&invalid_package).is_err());
-        let invalid_rule = RULES.replace("\"sink_g\": 60", "\"sink_g\": -1");
-        assert!(load_rules(&invalid_rule).is_err());
+        let bundle = crate::content::builtin().unwrap();
+        let raw = serde_json::to_string_pretty(&bundle.rules).unwrap();
+        let invalid_package = raw.replace("\"schema_version\": 1", "\"schema_version\": 99");
+        assert!(load_rules(&invalid_package, &bundle.rigs).is_err());
+        let invalid_rule = raw.replace("\"sink_g\": 60", "\"sink_g\": -1");
+        assert!(load_rules(&invalid_rule, &bundle.rigs).is_err());
     }
     #[test]
     fn saved_plans_preserve_original_scenario_and_rules() {
@@ -268,9 +283,12 @@ mod tests {
         let mut s = scenario();
         s.location.clear();
         s.casting_limit_g = Some(150.0);
-        assert!(evaluate(&s).unwrap().recommendations.is_empty());
+        assert!(evaluate(&s, &crate::content::builtin().unwrap())
+            .unwrap()
+            .recommendations
+            .is_empty());
         s.location = "altra-regione".into();
-        assert!(evaluate(&s).is_err());
+        assert!(evaluate(&s, &crate::content::builtin().unwrap()).is_err());
     }
     #[test]
     fn saved_plan_creates_linked_trip_atomically() {
@@ -310,7 +328,10 @@ mod tests {
     fn unknown_conditions_do_not_invent_a_forecast() {
         let mut s = scenario();
         s.condition = "sconosciuto".into();
-        assert!(evaluate(&s).unwrap().recommendations.is_empty());
+        assert!(evaluate(&s, &crate::content::builtin().unwrap())
+            .unwrap()
+            .recommendations
+            .is_empty());
     }
 }
 
@@ -320,20 +341,19 @@ pub struct SavedPlan {
     pub created_at: String,
     pub scenario_json: String,
     pub result_json: String,
+    pub rules_json: String,
     pub engine_version: String,
     pub content_version: String,
 }
-async fn persist(pool: &sqlx::SqlitePool, scenario: &Scenario) -> Result<Evaluation, AppError> {
-    let result = evaluate(scenario)?;
+pub(crate) async fn persist(
+    pool: &sqlx::SqlitePool,
+    scenario: &Scenario,
+) -> Result<Evaluation, AppError> {
+    let bundle = crate::content::active(pool).await?;
+    let result = evaluate(scenario, &bundle)?;
     let input = serde_json::to_string(scenario).map_err(|_| invalid("Scenario non valido."))?;
     let output = serde_json::to_string(&result).map_err(|_| invalid("Risultato non valido."))?;
-    let rules: serde_json::Value =
-        serde_json::from_str(RULES).map_err(|_| invalid("Regole non valide."))?;
-    let rigs: serde_json::Value =
-        serde_json::from_str(RIGS).map_err(|_| invalid("Catalogo non valido."))?;
-    let sectors: serde_json::Value =
-        serde_json::from_str(SECTORS).map_err(|_| invalid("Catalogo settori non valido."))?;
-    let snapshot = serde_json::json!({"rules":rules,"rigs":rigs,"sectors":sectors}).to_string();
+    let snapshot = serde_json::to_string(&bundle).map_err(|_| invalid("Pacchetto non valido."))?;
     sqlx::query("INSERT INTO plans(scenario_json,result_json,rules_json,engine_version,content_version) VALUES (?,?,?,?,?)")
         .bind(input).bind(output).bind(snapshot).bind(&result.engine_version).bind(&result.content_version)
         .execute(pool).await.map_err(AppError::database)?;
@@ -350,7 +370,7 @@ pub async fn save_plan(
 pub async fn list_plans(
     pool: tauri::State<'_, sqlx::SqlitePool>,
 ) -> Result<Vec<SavedPlan>, AppError> {
-    sqlx::query_as::<_,SavedPlan>("SELECT id,created_at,scenario_json,result_json,engine_version,content_version FROM plans ORDER BY id DESC").fetch_all(pool.inner()).await.map_err(AppError::database)
+    sqlx::query_as::<_,SavedPlan>("SELECT id,created_at,scenario_json,result_json,rules_json,engine_version,content_version FROM plans ORDER BY id DESC").fetch_all(pool.inner()).await.map_err(AppError::database)
 }
 
 async fn create_trip(pool: &sqlx::SqlitePool, plan_id: i64) -> Result<i64, AppError> {

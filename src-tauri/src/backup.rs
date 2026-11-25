@@ -170,7 +170,7 @@ mod tests {
 
 // Only the schema explicitly handled below is accepted. A later migration must
 // extend the copy list and its tests before restore is enabled for that schema.
-const RESTORE_SCHEMA_VERSION: i64 = 7;
+const RESTORE_SCHEMA_VERSION: i64 = 8;
 
 async fn restore(pool: &SqlitePool, source: &Path, recovery_dir: &Path) -> Result<(), AppError> {
     let source = std::fs::canonicalize(source)
@@ -214,7 +214,7 @@ async fn restore(pool: &SqlitePool, source: &Path, recovery_dir: &Path) -> Resul
             let recovery = recovery_dir.join(format!("before-restore-{nonce}.sqlite3"));
             snapshot(pool, &recovery).await?;
             for statement in [
-                "DELETE FROM trip_plans", "DELETE FROM plans", "DELETE FROM trip_positions", "DELETE FROM intervals", "DELETE FROM catches", "DELETE FROM observations", "DELETE FROM rods", "DELETE FROM trips", "DELETE FROM forecast_cache",
+                "DELETE FROM research_packages", "DELETE FROM trip_plans", "DELETE FROM plans", "DELETE FROM trip_positions", "DELETE FROM intervals", "DELETE FROM catches", "DELETE FROM observations", "DELETE FROM rods", "DELETE FROM trips", "DELETE FROM forecast_cache",
                 "INSERT INTO trips(id,title,starts_at,location,notes,outcome,created_at) SELECT id,title,starts_at,location,notes,outcome,created_at FROM imported.trips",
                 "INSERT INTO trip_positions(id,trip_id,role,latitude,longitude,origin,accuracy_m) SELECT id,trip_id,role,latitude,longitude,origin,accuracy_m FROM imported.trip_positions",
                 "INSERT INTO rods(id,trip_id,name) SELECT id,trip_id,name FROM imported.rods",
@@ -224,6 +224,7 @@ async fn restore(pool: &SqlitePool, source: &Path, recovery_dir: &Path) -> Resul
                 "INSERT INTO forecast_cache(latitude,longitude,weather,marine,retrieved_at) SELECT latitude,longitude,weather,marine,retrieved_at FROM imported.forecast_cache",
                 "INSERT INTO plans(id,created_at,scenario_json,result_json,rules_json,engine_version,content_version) SELECT id,created_at,scenario_json,result_json,rules_json,engine_version,content_version FROM imported.plans",
                 "INSERT INTO trip_plans(trip_id,plan_id,followed,notes) SELECT trip_id,plan_id,followed,notes FROM imported.trip_plans",
+                "INSERT INTO research_packages(package_id,content_version,region,bundle_json,active,imported_at) SELECT package_id,content_version,region,bundle_json,active,imported_at FROM imported.research_packages",
             ] { sqlx::query(statement).execute(&mut *conn).await.map_err(AppError::database)?; }
             sqlx::query("COMMIT").execute(&mut *conn).await.map_err(AppError::database)?;
             Ok(())
@@ -419,9 +420,18 @@ mod restore_tests {
             sqlx::query("INSERT INTO trip_positions(trip_id,role,latitude,longitude,origin,accuracy_m) VALUES (1,'station',0,0,'manual',50)").execute(&db).await.unwrap();
             sqlx::query("INSERT INTO plans(scenario_json,result_json,rules_json,engine_version,content_version) VALUES ('{}','{}','{}','1','test')").execute(&db).await.unwrap();
             sqlx::query("INSERT INTO trip_plans(trip_id,plan_id,followed,notes) VALUES (1,1,'partial','test')").execute(&db).await.unwrap();
+            let mut package = crate::content::builtin().unwrap();
+            package.package_id = "test".into();
+            package.content_version = "1".into();
+            package.review_status = "reviewed".into();
+            sqlx::query("INSERT INTO research_packages(package_id,content_version,region,bundle_json,active) VALUES ('test','1','Lazio',?,1)").bind(serde_json::to_string(&package).unwrap()).execute(&db).await.unwrap();
             let original = dir.join("backup.sqlite3");
             snapshot(&db, &original).await.unwrap();
             sqlx::query("UPDATE trips SET title='changed'")
+                .execute(&db)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM research_packages")
                 .execute(&db)
                 .await
                 .unwrap();
@@ -475,6 +485,10 @@ mod restore_tests {
                     .await
                     .unwrap(),
                 "partial"
+            );
+            assert_eq!(
+                crate::content::active(&db).await.unwrap().package_id,
+                "test"
             );
             let invalid = dir.join("invalid.sqlite3");
             std::fs::write(&invalid, b"not sqlite").unwrap();
@@ -543,6 +557,14 @@ mod legacy_tests {
             let old = dir.join("old.sqlite3");
             snapshot(&db, &old).await.unwrap();
             let old_db = SqlitePool::connect_with(SqliteConnectOptions::new().filename(&old))
+                .await
+                .unwrap();
+            sqlx::query("DROP TABLE research_packages")
+                .execute(&old_db)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM _sqlx_migrations WHERE version=8")
+                .execute(&old_db)
                 .await
                 .unwrap();
             sqlx::query("DROP TABLE trip_plans")
@@ -654,6 +676,8 @@ mod prior_plan_tests {
                 .await
                 .unwrap();
             for sql in [
+                "DROP TABLE research_packages",
+                "DELETE FROM _sqlx_migrations WHERE version=8",
                 "DROP TABLE trip_plans",
                 "DELETE FROM _sqlx_migrations WHERE version=7",
                 "DROP TABLE trip_positions",
@@ -735,6 +759,14 @@ mod prior_effort_tests {
             let old = dir.join("old.sqlite3");
             snapshot(&db, &old).await.unwrap();
             let old_db = SqlitePool::connect_with(SqliteConnectOptions::new().filename(&old))
+                .await
+                .unwrap();
+            sqlx::query("DROP TABLE research_packages")
+                .execute(&old_db)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM _sqlx_migrations WHERE version=8")
+                .execute(&old_db)
                 .await
                 .unwrap();
             sqlx::query("DROP TABLE trip_plans")
@@ -822,6 +854,14 @@ mod prior_positions_tests {
             let old_db = SqlitePool::connect_with(SqliteConnectOptions::new().filename(&old))
                 .await
                 .unwrap();
+            sqlx::query("DROP TABLE research_packages")
+                .execute(&old_db)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM _sqlx_migrations WHERE version=8")
+                .execute(&old_db)
+                .await
+                .unwrap();
             sqlx::query("DROP TABLE trip_plans")
                 .execute(&old_db)
                 .await
@@ -853,6 +893,88 @@ mod prior_positions_tests {
                     .await
                     .unwrap(),
                 6
+            );
+            old_db.close().await;
+            db.close().await;
+            std::fs::remove_dir_all(dir).unwrap();
+        });
+    }
+}
+
+#[cfg(test)]
+mod prior_links_tests {
+    use super::*;
+    #[test]
+    fn v7_backup_preserves_trip_plan_link() {
+        tauri::async_runtime::block_on(async {
+            let dir = std::env::temp_dir().join(format!(
+                "sanpei-v7-{}-{}",
+                std::process::id(),
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            std::fs::create_dir(&dir).unwrap();
+            let db = SqlitePool::connect_with(
+                SqliteConnectOptions::new()
+                    .filename(dir.join("live.sqlite3"))
+                    .create_if_missing(true)
+                    .foreign_keys(true),
+            )
+            .await
+            .unwrap();
+            sqlx::migrate!("./migrations").run(&db).await.unwrap();
+            sqlx::query(
+                "INSERT INTO trips(title,starts_at) VALUES ('test','2026-01-01T00:00:00Z')",
+            )
+            .execute(&db)
+            .await
+            .unwrap();
+            sqlx::query("INSERT INTO plans(scenario_json,result_json,rules_json,engine_version,content_version) VALUES ('{}','{}','{}','1','test')").execute(&db).await.unwrap();
+            sqlx::query("INSERT INTO trip_plans(trip_id,plan_id,followed) VALUES (1,1,'partial')")
+                .execute(&db)
+                .await
+                .unwrap();
+            let old = dir.join("old.sqlite3");
+            snapshot(&db, &old).await.unwrap();
+            let old_db = SqlitePool::connect_with(SqliteConnectOptions::new().filename(&old))
+                .await
+                .unwrap();
+            sqlx::query("DROP TABLE research_packages")
+                .execute(&old_db)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM _sqlx_migrations WHERE version=8")
+                .execute(&old_db)
+                .await
+                .unwrap();
+            old_db.close().await;
+            sqlx::query("DELETE FROM trip_plans")
+                .execute(&db)
+                .await
+                .unwrap();
+            normalize_and_restore(&db, &old, &dir.join("recovery"))
+                .await
+                .unwrap();
+            assert_eq!(
+                sqlx::query_scalar::<_, String>("SELECT followed FROM trip_plans")
+                    .fetch_one(&db)
+                    .await
+                    .unwrap(),
+                "partial"
+            );
+            let old_db = SqlitePool::connect_with(
+                SqliteConnectOptions::new().filename(&old).read_only(true),
+            )
+            .await
+            .unwrap();
+            assert_eq!(
+                sqlx::query_scalar::<_, i64>("SELECT MAX(version) FROM _sqlx_migrations")
+                    .fetch_one(&old_db)
+                    .await
+                    .unwrap(),
+                7
             );
             old_db.close().await;
             db.close().await;
