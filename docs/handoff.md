@@ -22,3 +22,7 @@
 ## Prossimo compito
 
 Verificare nell'app desktop la mappa locale, la creazione degli intervalli e la persistenza dopo riavvio usando dati sintetici. Completare il diario e la conservazione sicura prima della release; quindi implementare pacchetti scientifici validati e motore spiegabile secondo `implementation-plan.md` e `architecture.md`.
+
+## Tentativo di backup
+
+Una prima implementazione `VACUUM INTO` non ha superato il test di lettura della copia e non è stata mantenuta o pubblicata. Riprodurre e risolvere il problema con test su un database SQLite su disco prima di esporre il backup; non dichiarare disponibile una copia non verificata.
