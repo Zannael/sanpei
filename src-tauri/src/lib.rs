@@ -137,6 +137,7 @@ pub fn run() {
             diary::add_interval,
             diary::add_catch,
             diary::add_observation,
+            diary::save_position,
             diary::delete_diary_item,
             diary::set_outcome,
             weather::fetch_forecast,
@@ -231,11 +232,18 @@ mod tests {
             sqlx::query("INSERT INTO intervals(rod_id,starts_at,ends_at) VALUES (1,'2026-01-01T01:00:00Z','2026-01-01T02:00:00Z')").execute(&pool).await.unwrap();
             sqlx::query("INSERT INTO observations(trip_id,occurred_at,kind) VALUES (1,'2026-01-01T01:00:00Z','mare')").execute(&pool).await.unwrap();
             sqlx::query("INSERT INTO catches(trip_id,occurred_at,species,disposition) VALUES (1,'2026-01-01T01:00:00Z','test','released')").execute(&pool).await.unwrap();
+            sqlx::query("INSERT INTO trip_positions(trip_id,role,latitude,longitude,origin) VALUES (1,'station',0,0,'manual')").execute(&pool).await.unwrap();
             sqlx::query("DELETE FROM trips WHERE id=1")
                 .execute(&pool)
                 .await
                 .unwrap();
-            for table in ["rods", "intervals", "observations", "catches"] {
+            for table in [
+                "rods",
+                "intervals",
+                "observations",
+                "catches",
+                "trip_positions",
+            ] {
                 let count: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {table}"))
                     .fetch_one(&pool)
                     .await

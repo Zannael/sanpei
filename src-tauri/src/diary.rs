@@ -43,12 +43,31 @@ pub struct NewObservation {
     pub kind: String,
     pub notes: String,
 }
+#[derive(Serialize, sqlx::FromRow)]
+pub struct Position {
+    pub id: i64,
+    pub role: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub origin: String,
+    pub accuracy_m: Option<f64>,
+}
+#[derive(Deserialize)]
+pub struct NewPosition {
+    pub trip_id: i64,
+    pub role: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub origin: String,
+    pub accuracy_m: Option<f64>,
+}
 #[derive(Serialize)]
 pub struct Details {
     pub rods: Vec<Rod>,
     pub intervals: Vec<Interval>,
     pub catches: Vec<Catch>,
     pub observations: Vec<Observation>,
+    pub positions: Vec<Position>,
 }
 #[derive(Deserialize)]
 pub struct NewInterval {
@@ -96,11 +115,13 @@ pub async fn trip_details(
     .fetch_all(pool.inner())
     .await
     .map_err(AppError::database)?;
+    let positions=sqlx::query_as::<_,Position>("SELECT id,role,latitude,longitude,origin,accuracy_m FROM trip_positions WHERE trip_id=? ORDER BY role").bind(trip_id).fetch_all(pool.inner()).await.map_err(AppError::database)?;
     Ok(Details {
         rods,
         intervals,
         catches,
         observations,
+        positions,
     })
 }
 #[tauri::command]
@@ -238,6 +259,7 @@ pub async fn delete_diary_item(
         }
         "catch" => "DELETE FROM catches WHERE id=? AND trip_id=?",
         "observation" => "DELETE FROM observations WHERE id=? AND trip_id=?",
+        "position" => "DELETE FROM trip_positions WHERE id=? AND trip_id=?",
         _ => return Err(invalid("Elemento non valido.")),
     };
     let mut tx = pool.begin().await.map_err(AppError::database)?;
@@ -254,5 +276,26 @@ pub async fn delete_diary_item(
         sqlx::query("UPDATE trips SET outcome='incomplete' WHERE id=? AND outcome='catches' AND NOT EXISTS (SELECT 1 FROM catches WHERE trip_id=?)").bind(trip_id).bind(trip_id).execute(&mut *tx).await.map_err(AppError::database)?;
     }
     tx.commit().await.map_err(AppError::database)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn save_position(
+    pool: tauri::State<'_, SqlitePool>,
+    position: NewPosition,
+) -> Result<(), AppError> {
+    if !["station", "cast"].contains(&position.role.as_str())
+        || !["manual", "map", "gps"].contains(&position.origin.as_str())
+        || !position.latitude.is_finite()
+        || !(-90.0..=90.0).contains(&position.latitude)
+        || !position.longitude.is_finite()
+        || !(-180.0..=180.0).contains(&position.longitude)
+        || position
+            .accuracy_m
+            .is_some_and(|x| !x.is_finite() || x < 0.0)
+    {
+        return Err(invalid("Controlla posizione, origine e accuratezza."));
+    }
+    sqlx::query("INSERT INTO trip_positions(trip_id,role,latitude,longitude,origin,accuracy_m) VALUES (?,?,?,?,?,?) ON CONFLICT(trip_id,role) DO UPDATE SET latitude=excluded.latitude,longitude=excluded.longitude,origin=excluded.origin,accuracy_m=excluded.accuracy_m").bind(position.trip_id).bind(position.role).bind(position.latitude).bind(position.longitude).bind(position.origin).bind(position.accuracy_m).execute(pool.inner()).await.map_err(AppError::database)?;
     Ok(())
 }
