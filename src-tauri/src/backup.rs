@@ -170,7 +170,7 @@ mod tests {
 
 // Only the schema explicitly handled below is accepted. A later migration must
 // extend the copy list and its tests before restore is enabled for that schema.
-const RESTORE_SCHEMA_VERSION: i64 = 4;
+const RESTORE_SCHEMA_VERSION: i64 = 5;
 
 async fn restore(pool: &SqlitePool, source: &Path, recovery_dir: &Path) -> Result<(), AppError> {
     let source = std::fs::canonicalize(source)
@@ -217,7 +217,7 @@ async fn restore(pool: &SqlitePool, source: &Path, recovery_dir: &Path) -> Resul
                 "DELETE FROM plans", "DELETE FROM intervals", "DELETE FROM catches", "DELETE FROM observations", "DELETE FROM rods", "DELETE FROM trips", "DELETE FROM forecast_cache",
                 "INSERT INTO trips(id,title,starts_at,location,notes,outcome,created_at) SELECT id,title,starts_at,location,notes,outcome,created_at FROM imported.trips",
                 "INSERT INTO rods(id,trip_id,name) SELECT id,trip_id,name FROM imported.rods",
-                "INSERT INTO intervals(id,rod_id,starts_at,ends_at,rig,bait) SELECT id,rod_id,starts_at,ends_at,rig,bait FROM imported.intervals ORDER BY id",
+                "INSERT INTO intervals(id,rod_id,starts_at,ends_at,rig,bait,pause_minutes,ineffective_minutes) SELECT id,rod_id,starts_at,ends_at,rig,bait,pause_minutes,ineffective_minutes FROM imported.intervals ORDER BY id",
                 "INSERT INTO catches(id,trip_id,occurred_at,species,uncertain,length_cm,weight_g,weight_estimated,disposition) SELECT id,trip_id,occurred_at,species,uncertain,length_cm,weight_g,weight_estimated,disposition FROM imported.catches",
                 "INSERT INTO observations(id,trip_id,occurred_at,kind,notes) SELECT id,trip_id,occurred_at,kind,notes FROM imported.observations",
                 "INSERT INTO forecast_cache(latitude,longitude,weather,marine,retrieved_at) SELECT latitude,longitude,weather,marine,retrieved_at FROM imported.forecast_cache",
@@ -519,6 +519,26 @@ mod legacy_tests {
             let old_db = SqlitePool::connect_with(SqliteConnectOptions::new().filename(&old))
                 .await
                 .unwrap();
+            sqlx::query("DROP TRIGGER intervals_effort_insert")
+                .execute(&old_db)
+                .await
+                .unwrap();
+            sqlx::query("DROP TRIGGER intervals_effort_update")
+                .execute(&old_db)
+                .await
+                .unwrap();
+            sqlx::query("ALTER TABLE intervals DROP COLUMN ineffective_minutes")
+                .execute(&old_db)
+                .await
+                .unwrap();
+            sqlx::query("ALTER TABLE intervals DROP COLUMN pause_minutes")
+                .execute(&old_db)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM _sqlx_migrations WHERE version=5")
+                .execute(&old_db)
+                .await
+                .unwrap();
             sqlx::query("DROP TABLE plans")
                 .execute(&old_db)
                 .await
@@ -553,6 +573,76 @@ mod legacy_tests {
                     .await
                     .unwrap(),
                 3
+            );
+            old_db.close().await;
+            db.close().await;
+            std::fs::remove_dir_all(dir).unwrap();
+        });
+    }
+}
+
+#[cfg(test)]
+mod prior_plan_tests {
+    use super::*;
+    #[test]
+    fn v4_backup_migrates_without_losing_saved_plans() {
+        tauri::async_runtime::block_on(async {
+            let dir = std::env::temp_dir().join(format!(
+                "sanpei-v4-{}-{}",
+                std::process::id(),
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            std::fs::create_dir(&dir).unwrap();
+            let db = SqlitePool::connect_with(
+                SqliteConnectOptions::new()
+                    .filename(dir.join("live.sqlite3"))
+                    .create_if_missing(true)
+                    .foreign_keys(true),
+            )
+            .await
+            .unwrap();
+            sqlx::migrate!("./migrations").run(&db).await.unwrap();
+            sqlx::query("INSERT INTO plans(scenario_json,result_json,rules_json,engine_version,content_version) VALUES ('{}','{}','{}','1','v4')").execute(&db).await.unwrap();
+            let old = dir.join("old.sqlite3");
+            snapshot(&db, &old).await.unwrap();
+            let old_db = SqlitePool::connect_with(SqliteConnectOptions::new().filename(&old))
+                .await
+                .unwrap();
+            for sql in [
+                "DROP TRIGGER intervals_effort_insert",
+                "DROP TRIGGER intervals_effort_update",
+                "ALTER TABLE intervals DROP COLUMN ineffective_minutes",
+                "ALTER TABLE intervals DROP COLUMN pause_minutes",
+                "DELETE FROM _sqlx_migrations WHERE version=5",
+            ] {
+                sqlx::query(sql).execute(&old_db).await.unwrap();
+            }
+            old_db.close().await;
+            sqlx::query("DELETE FROM plans").execute(&db).await.unwrap();
+            normalize_and_restore(&db, &old, &dir.join("recovery"))
+                .await
+                .unwrap();
+            assert_eq!(
+                sqlx::query_scalar::<_, String>("SELECT content_version FROM plans")
+                    .fetch_one(&db)
+                    .await
+                    .unwrap(),
+                "v4"
+            );
+            let old_db = SqlitePool::connect_with(
+                SqliteConnectOptions::new().filename(&old).read_only(true),
+            )
+            .await
+            .unwrap();
+            assert_eq!(
+                sqlx::query_scalar::<_, i64>("SELECT MAX(version) FROM _sqlx_migrations")
+                    .fetch_one(&old_db)
+                    .await
+                    .unwrap(),
+                4
             );
             old_db.close().await;
             db.close().await;

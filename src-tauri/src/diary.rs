@@ -15,6 +15,8 @@ pub struct Interval {
     pub ends_at: String,
     pub rig: String,
     pub bait: String,
+    pub pause_minutes: Option<i64>,
+    pub ineffective_minutes: Option<i64>,
 }
 #[derive(Serialize, sqlx::FromRow)]
 pub struct Catch {
@@ -55,6 +57,8 @@ pub struct NewInterval {
     pub ends_at: String,
     pub rig: String,
     pub bait: String,
+    pub pause_minutes: Option<i64>,
+    pub ineffective_minutes: Option<i64>,
 }
 #[derive(Deserialize)]
 pub struct NewCatch {
@@ -83,7 +87,7 @@ pub async fn trip_details(
         .fetch_all(pool.inner())
         .await
         .map_err(AppError::database)?;
-    let intervals=sqlx::query_as::<_,Interval>("SELECT i.id,i.rod_id,i.starts_at,i.ends_at,i.rig,i.bait FROM intervals i JOIN rods r ON r.id=i.rod_id WHERE r.trip_id=? ORDER BY i.starts_at").bind(trip_id).fetch_all(pool.inner()).await.map_err(AppError::database)?;
+    let intervals=sqlx::query_as::<_,Interval>("SELECT i.id,i.rod_id,i.starts_at,i.ends_at,i.rig,i.bait,i.pause_minutes,i.ineffective_minutes FROM intervals i JOIN rods r ON r.id=i.rod_id WHERE r.trip_id=? ORDER BY i.starts_at").bind(trip_id).fetch_all(pool.inner()).await.map_err(AppError::database)?;
     let catches=sqlx::query_as::<_,Catch>("SELECT id,occurred_at,species,uncertain,length_cm,weight_g,weight_estimated,disposition FROM catches WHERE trip_id=? ORDER BY occurred_at").bind(trip_id).fetch_all(pool.inner()).await.map_err(AppError::database)?;
     let observations = sqlx::query_as::<_, Observation>(
         "SELECT id,occurred_at,kind,notes FROM observations WHERE trip_id=? ORDER BY occurred_at",
@@ -127,16 +131,23 @@ pub async fn add_interval(
     {
         return Err(invalid("Controlla inizio e fine dell'intervallo."));
     }
-    sqlx::query("INSERT INTO intervals (rod_id,starts_at,ends_at,rig,bait) VALUES (?,?,?,?,?)")
+    if interval.pause_minutes.is_some_and(|v| v < 0)
+        || interval.ineffective_minutes.is_some_and(|v| v < 0)
+    {
+        return Err(invalid("I minuti devono essere non negativi."));
+    }
+    sqlx::query("INSERT INTO intervals (rod_id,starts_at,ends_at,rig,bait,pause_minutes,ineffective_minutes) VALUES (?,?,?,?,?,?,?)")
         .bind(interval.rod_id)
         .bind(interval.starts_at)
         .bind(interval.ends_at)
         .bind(interval.rig)
         .bind(interval.bait)
+        .bind(interval.pause_minutes)
+        .bind(interval.ineffective_minutes)
         .execute(pool.inner())
         .await
         .map_err(|e| {
-            if e.to_string().contains("interval_overlap") {
+            if e.to_string().contains("invalid_effort") {invalid("Pause e minuti inefficaci superano la durata dell’intervallo.")} else if e.to_string().contains("interval_overlap") {
                 invalid("Gli intervalli della stessa canna non possono sovrapporsi.")
             } else {
                 AppError::database(e)

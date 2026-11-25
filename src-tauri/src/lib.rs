@@ -208,6 +208,10 @@ mod tests {
             assert!(add(1, "2026-01-01T11:00:00Z", "2026-01-01T12:00:00Z")
                 .await
                 .is_ok());
+            let invalid=sqlx::query("INSERT INTO intervals(rod_id,starts_at,ends_at,pause_minutes,ineffective_minutes) VALUES (2,'2026-01-01T12:00:00Z','2026-01-01T13:00:00Z',50,20)").execute(&pool).await;
+            assert!(invalid.is_err());
+            let valid=sqlx::query("INSERT INTO intervals(rod_id,starts_at,ends_at,pause_minutes,ineffective_minutes) VALUES (2,'2026-01-01T12:00:00Z','2026-01-01T13:00:00Z',30,20)").execute(&pool).await;
+            assert!(valid.is_ok());
         });
     }
     #[test]
