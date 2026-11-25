@@ -1,7 +1,7 @@
 use crate::AppError;
 use serde::{Deserialize, Serialize};
 
-const ENGINE_VERSION: &str = "2";
+const ENGINE_VERSION: &str = "3";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Scenario {
     pub technique: String,
@@ -17,6 +17,15 @@ pub struct Scenario {
     pub forecast_snapshot: Option<serde_json::Value>,
     #[serde(default)]
     pub previous_plan_id: Option<i64>,
+    #[serde(default)]
+    pub extra_parameters: std::collections::BTreeMap<String, serde_json::Value>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Predicate {
+    parameter: String,
+    operator: String,
+    value: serde_json::Value,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -29,6 +38,8 @@ struct Rule {
     risk: String,
     check: String,
     evidence: String,
+    #[serde(default)]
+    predicates: Vec<Predicate>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -71,7 +82,25 @@ fn invalid(message: &str) -> AppError {
         message: message.into(),
     }
 }
-fn load_rules(raw: &str, catalog: &serde_json::Value) -> Result<RulePackage, AppError> {
+fn value_valid(parameter: &crate::content::Parameter, value: &serde_json::Value) -> bool {
+    match parameter.kind.as_str() {
+        "number" => value.as_f64().is_some_and(|n| {
+            n.is_finite()
+                && parameter.minimum.is_none_or(|min| n >= min)
+                && parameter.maximum.is_none_or(|max| n <= max)
+        }),
+        "boolean" => value.is_boolean(),
+        "category" => value
+            .as_str()
+            .is_some_and(|v| parameter.options.iter().any(|o| o == v)),
+        _ => false,
+    }
+}
+fn load_rules(
+    raw: &str,
+    catalog: &serde_json::Value,
+    parameters: &[crate::content::Parameter],
+) -> Result<RulePackage, AppError> {
     let pack: RulePackage =
         serde_json::from_str(raw).map_err(|_| invalid("Pacchetto di regole non valido."))?;
     if pack.schema_version != 1
@@ -110,14 +139,35 @@ fn load_rules(raw: &str, catalog: &serde_json::Value) -> Result<RulePackage, App
             return Err(invalid("Regola incompleta, duplicata o non supportata."));
         }
     }
+    for rule in &pack.rules {
+        for predicate in &rule.predicates {
+            let param = parameters
+                .iter()
+                .find(|p| p.id == predicate.parameter)
+                .ok_or_else(|| invalid("La regola usa un parametro non definito."))?;
+            let supported = match param.kind.as_str() {
+                "number" => {
+                    ["eq", "neq", "lt", "lte", "gt", "gte"].contains(&predicate.operator.as_str())
+                }
+                "boolean" | "category" => ["eq", "neq"].contains(&predicate.operator.as_str()),
+                _ => false,
+            };
+            if !supported || !value_valid(param, &predicate.value) {
+                return Err(invalid(
+                    "Condizione del parametro non valida o non supportata.",
+                ));
+            }
+        }
+    }
     Ok(pack)
 }
 pub(crate) fn validate_rules(
     rules: &serde_json::Value,
     rigs: &serde_json::Value,
+    parameters: &[crate::content::Parameter],
 ) -> Result<(), AppError> {
     let raw = serde_json::to_string(rules).map_err(|_| invalid("Regole non valide."))?;
-    load_rules(&raw, rigs).map(|_| ())
+    load_rules(&raw, rigs, parameters).map(|_| ())
 }
 pub(crate) fn evaluate(
     s: &Scenario,
@@ -156,7 +206,18 @@ pub(crate) fn evaluate(
     }
     let raw_rules =
         serde_json::to_string(&bundle.rules).map_err(|_| invalid("Regole non valide."))?;
-    let pack = load_rules(&raw_rules, &bundle.rigs)?;
+    let pack = load_rules(&raw_rules, &bundle.rigs, &bundle.parameters)?;
+    for (id, value) in &s.extra_parameters {
+        let param = bundle
+            .parameters
+            .iter()
+            .find(|p| &p.id == id)
+            .ok_or_else(|| invalid("Parametro non disponibile nel pacchetto."))?;
+        if !value_valid(param, value) {
+            return Err(invalid("Valore di un parametro non valido."));
+        }
+    }
+    let mut missing = std::collections::BTreeSet::new();
     if s.fixed_rig
         .as_ref()
         .is_some_and(|id| !pack.rules.iter().any(|r| &r.rig_id == id))
@@ -184,6 +245,47 @@ pub(crate) fn evaluate(
                 continue;
             }
         }
+        let mut matched = true;
+        for predicate in &rule.predicates {
+            let Some(actual) = s.extra_parameters.get(&predicate.parameter) else {
+                missing.insert(predicate.parameter.clone());
+                matched = false;
+                continue;
+            };
+            let matches = match predicate.operator.as_str() {
+                "eq" => actual
+                    .as_f64()
+                    .zip(predicate.value.as_f64())
+                    .map_or_else(|| actual == &predicate.value, |(a, b)| a == b),
+                "neq" => actual
+                    .as_f64()
+                    .zip(predicate.value.as_f64())
+                    .map_or_else(|| actual != &predicate.value, |(a, b)| a != b),
+                "lt" => actual
+                    .as_f64()
+                    .zip(predicate.value.as_f64())
+                    .is_some_and(|(a, b)| a < b),
+                "lte" => actual
+                    .as_f64()
+                    .zip(predicate.value.as_f64())
+                    .is_some_and(|(a, b)| a <= b),
+                "gt" => actual
+                    .as_f64()
+                    .zip(predicate.value.as_f64())
+                    .is_some_and(|(a, b)| a > b),
+                "gte" => actual
+                    .as_f64()
+                    .zip(predicate.value.as_f64())
+                    .is_some_and(|(a, b)| a >= b),
+                _ => false,
+            };
+            if !matches {
+                matched = false;
+            }
+        }
+        if !matched {
+            continue;
+        }
         recommendations.push(Recommendation {
             rig_id: rule.rig_id.clone(),
             reason: rule.reason.clone(),
@@ -192,6 +294,12 @@ pub(crate) fn evaluate(
             source: pack.source.clone(),
             evidence: rule.evidence.clone(),
         });
+    }
+    if !missing.is_empty() {
+        warnings.push(format!(
+            "Dati mancanti per verificare alcune proposte: {}.",
+            missing.into_iter().collect::<Vec<_>>().join(", ")
+        ));
     }
     if recommendations.is_empty() && s.condition != "sconosciuto" {
         warnings.push("Nessun assetto documentato soddisfa queste scelte: rivedi tecnica, condizioni o vincoli.".into());
@@ -271,6 +379,9 @@ async fn add_comparison(
     if old.target != scenario.target {
         changed.push("specie annotata".into());
     }
+    if old.extra_parameters != scenario.extra_parameters {
+        changed.push("parametri aggiuntivi".into());
+    }
     if old.forecast_snapshot != scenario.forecast_snapshot {
         changed.push("dati meteo allegati".into());
     }
@@ -314,6 +425,7 @@ mod tests {
             target: String::new(),
             forecast_snapshot: None,
             previous_plan_id: None,
+            extra_parameters: Default::default(),
         }
     }
     #[test]
@@ -330,13 +442,72 @@ mod tests {
         assert_eq!(result.recommendations[0].rig_id, "C");
     }
     #[test]
+    fn earlier_snapshots_remain_readable() {
+        let original = scenario();
+        let mut old = serde_json::to_value(&original).unwrap();
+        let object = old.as_object_mut().unwrap();
+        object.remove("extra_parameters");
+        object.remove("previous_plan_id");
+        object.remove("forecast_snapshot");
+        let restored: Scenario = serde_json::from_value(old).unwrap();
+        assert!(restored.extra_parameters.is_empty());
+        assert!(restored.previous_plan_id.is_none());
+        assert!(restored.forecast_snapshot.is_none());
+        let mut output =
+            serde_json::to_value(evaluate(&original, &crate::content::builtin().unwrap()).unwrap())
+                .unwrap();
+        output.as_object_mut().unwrap().remove("comparison");
+        let restored: Evaluation = serde_json::from_value(output).unwrap();
+        assert!(restored.comparison.is_none());
+    }
+    #[test]
+    fn typed_additional_parameters_are_safe_and_explain_missing_values() {
+        let mut bundle = crate::content::builtin().unwrap();
+        bundle.parameters.push(crate::content::Parameter {
+            id: "torbidita".into(),
+            label: "Torbidità osservata".into(),
+            kind: "number".into(),
+            source: "fonte di prova".into(),
+            unit: Some("unità".into()),
+            options: vec![],
+            minimum: Some(0.0),
+            maximum: Some(10.0),
+        });
+        bundle.rules["rules"][0]["predicates"] =
+            serde_json::json!([{"parameter":"torbidita","operator":"gte","value":3}]);
+        crate::content::validate(&bundle, false).unwrap();
+        let mut s = scenario();
+        s.condition = "calmo".into();
+        s.fixed_rig = Some("A".into());
+        s.casting_limit_g = None;
+        let missing = evaluate(&s, &bundle).unwrap();
+        assert!(missing.recommendations.is_empty());
+        assert!(missing.warnings.iter().any(|w| w.contains("torbidita")));
+        s.extra_parameters
+            .insert("torbidita".into(), serde_json::json!(2));
+        assert!(evaluate(&s, &bundle).unwrap().recommendations.is_empty());
+        s.extra_parameters
+            .insert("torbidita".into(), serde_json::json!(4));
+        assert_eq!(evaluate(&s, &bundle).unwrap().recommendations.len(), 1);
+        s.extra_parameters
+            .insert("torbidita".into(), serde_json::json!("4"));
+        assert!(evaluate(&s, &bundle).is_err());
+        s.extra_parameters
+            .insert("torbidita".into(), serde_json::json!(4));
+        bundle.rules["rules"][0]["predicates"][0]["operator"] = serde_json::json!("eq");
+        bundle.rules["rules"][0]["predicates"][0]["value"] = serde_json::json!(4.0);
+        assert_eq!(evaluate(&s, &bundle).unwrap().recommendations.len(), 1);
+        bundle.rules["rules"][0]["predicates"][0]["operator"] = serde_json::json!("exec");
+        assert!(crate::content::validate(&bundle, false).is_err());
+    }
+    #[test]
     fn unsupported_packages_are_rejected() {
         let bundle = crate::content::builtin().unwrap();
         let raw = serde_json::to_string_pretty(&bundle.rules).unwrap();
         let invalid_package = raw.replace("\"schema_version\": 1", "\"schema_version\": 99");
-        assert!(load_rules(&invalid_package, &bundle.rigs).is_err());
+        assert!(load_rules(&invalid_package, &bundle.rigs, &bundle.parameters).is_err());
         let invalid_rule = raw.replace("\"sink_g\": 60", "\"sink_g\": -1");
-        assert!(load_rules(&invalid_rule, &bundle.rigs).is_err());
+        assert!(load_rules(&invalid_rule, &bundle.rigs, &bundle.parameters).is_err());
     }
     #[test]
     fn saved_plans_preserve_original_scenario_and_rules() {

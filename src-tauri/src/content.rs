@@ -4,12 +4,30 @@ use sqlx::SqlitePool;
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct Parameter {
+    pub id: String,
+    pub label: String,
+    pub kind: String,
+    pub source: String,
+    #[serde(default)]
+    pub unit: Option<String>,
+    #[serde(default)]
+    pub options: Vec<String>,
+    #[serde(default)]
+    pub minimum: Option<f64>,
+    #[serde(default)]
+    pub maximum: Option<f64>,
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Bundle {
     pub schema_version: u32,
     pub package_id: String,
     pub content_version: String,
     pub region: String,
     pub review_status: String,
+    #[serde(default)]
+    pub parameters: Vec<Parameter>,
     pub rules: serde_json::Value,
     pub rigs: serde_json::Value,
     pub sectors: serde_json::Value,
@@ -27,6 +45,7 @@ pub fn builtin() -> Result<Bundle, AppError> {
         content_version: "0.1.0".into(),
         region: "Lazio".into(),
         review_status: "draft".into(),
+        parameters: Vec::new(),
         rules: serde_json::from_str(include_str!("../../content/rules.v1.json"))
             .map_err(|_| invalid("Regole iniziali non valide."))?,
         rigs: serde_json::from_str(include_str!("../../content/lazio-rigs.v1.json"))
@@ -146,7 +165,43 @@ pub fn validate(bundle: &Bundle, imported: bool) -> Result<(), AppError> {
         "sectors",
         &["name", "habitat", "techniques", "caution"],
     )?;
-    planner::validate_rules(&bundle.rules, &bundle.rigs)?;
+    let mut ids = std::collections::HashSet::new();
+    for param in &bundle.parameters {
+        if param.id.is_empty()
+            || param.id.len() > 80
+            || !param
+                .id
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+            || !ids.insert(&param.id)
+            || param.label.trim().is_empty()
+            || param.source.trim().is_empty()
+            || !["number", "boolean", "category"].contains(&param.kind.as_str())
+            || param.minimum.is_some_and(|x| !x.is_finite())
+            || param.maximum.is_some_and(|x| !x.is_finite())
+            || matches!((param.minimum,param.maximum),(Some(a),Some(b)) if a>b)
+        {
+            return Err(invalid("Definizione del parametro non valida."));
+        }
+        if param.kind != "number"
+            && (param.minimum.is_some() || param.maximum.is_some() || param.unit.is_some())
+        {
+            return Err(invalid(
+                "Unità e intervalli sono riservati ai parametri numerici.",
+            ));
+        }
+        let options: std::collections::HashSet<&str> =
+            param.options.iter().map(String::as_str).collect();
+        if (param.kind == "category"
+            && (param.options.is_empty()
+                || options.len() != param.options.len()
+                || param.options.iter().any(|x| x.trim().is_empty())))
+            || (param.kind != "category" && !param.options.is_empty())
+        {
+            return Err(invalid("Opzioni del parametro non valide."));
+        }
+    }
+    planner::validate_rules(&bundle.rules, &bundle.rigs, &bundle.parameters)?;
     Ok(())
 }
 pub async fn active(pool: &SqlitePool) -> Result<Bundle, AppError> {
@@ -303,6 +358,7 @@ mod tests {
                 target: String::new(),
                 forecast_snapshot: None,
                 previous_plan_id: None,
+                extra_parameters: Default::default(),
             };
             planner::persist(&pool, &scenario).await.unwrap();
             let previous: (String, String) =
@@ -345,6 +401,43 @@ mod tests {
                     .unwrap(),
                 2
             );
+            let mut third = second.clone();
+            third.content_version = "3".into();
+            third.parameters.push(Parameter {
+                id: "chiarezza".into(),
+                label: "Chiarezza".into(),
+                kind: "category".into(),
+                source: "fonte di prova".into(),
+                unit: None,
+                options: vec!["limpida".into(), "torbida".into()],
+                minimum: None,
+                maximum: None,
+            });
+            third.rules["rules"][0]["predicates"] =
+                serde_json::json!([{"parameter":"chiarezza","operator":"eq","value":"limpida"}]);
+            let parsed: Bundle =
+                serde_json::from_str(&serde_json::to_string(&third).unwrap()).unwrap();
+            store(&pool, &parsed).await.unwrap();
+            let missing = serde_json::to_value(
+                planner::evaluate(&scenario, &active(&pool).await.unwrap()).unwrap(),
+            )
+            .unwrap();
+            assert!(missing["recommendations"].as_array().unwrap().is_empty());
+            let mut filled = scenario.clone();
+            filled
+                .extra_parameters
+                .insert("chiarezza".into(), serde_json::json!("limpida"));
+            let evaluated = serde_json::to_value(
+                planner::evaluate(&filled, &active(&pool).await.unwrap()).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(evaluated["recommendations"].as_array().unwrap().len(), 1);
+            let after: (String, String) =
+                sqlx::query_as("SELECT result_json,rules_json FROM plans WHERE id=1")
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
+            assert_eq!(previous, after);
         });
     }
 }

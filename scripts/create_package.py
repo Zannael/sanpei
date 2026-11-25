@@ -10,6 +10,7 @@ package = {
     'content_version': '0.1.0',
     'region': 'Lazio',
     'review_status': 'draft',
+    'parameters': [],
     'rules': read('rules.v1.json'),
     'rigs': read('lazio-rigs.v1.json'),
     'sectors': read('lazio-sectors.v1.json'),
