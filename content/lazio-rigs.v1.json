@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "content_version": "0.1.0",
+  "status": "draft",
+  "source": "Ricerca critica Lazio, 24 novembre 2026, sezioni 10–14",
+  "rigs": [
+    {
+      "id": "A",
+      "name": "Bracciolo basso",
+      "use": "Fondo leggero su sabbia",
+      "detail": "Trave 100 cm; snodo a 15 cm dal piombo; bracciolo 120 cm. Piombo iniziale 60 g.",
+      "caution": "Se si aggroviglia, prova un bracciolo più corto. La massa totale deve essere compatibile con tutta l’attrezzatura."
+    },
+    {
+      "id": "B",
+      "name": "Piombo scorrevole",
+      "use": "Boccone più consistente",
+      "detail": "Terminale 150 cm; piombo iniziale 80–120 g. Passafilo con perla morbida e girella.",
+      "caution": "Verifica che la lenza scorra: il piombo non deve rimanere imprigionato."
+    },
+    {
+      "id": "C",
+      "name": "Due braccioli corti",
+      "use": "Moto ondoso lavorabile",
+      "detail": "Trave 180 cm; snodi a 40 e 120 cm dal piombo; braccioli di 30 e 35 cm. Piombo iniziale 125 g.",
+      "caution": "Le misure limitano le interferenze geometriche, ma non eliminano tutti i grovigli."
+    },
+    {
+      "id": "D",
+      "name": "Bracciolo alto",
+      "use": "Un solo boccone resistente",
+      "detail": "Trave 150 cm; snodo a 120 cm dal piombo; bracciolo 100 cm. Piombo iniziale 125 g.",
+      "caution": "Un eventuale bait clip va regolato e provato; l’esca non rimane necessariamente sollevata."
+    },
+    {
+      "id": "E",
+      "name": "Spallinata aperta",
+      "use": "Bolognese in acqua tranquilla",
+      "detail": "Galleggiante 1,5 g; terminale 80 cm. Sei gruppi di pallini per 1,30 g iniziali.",
+      "caution": "La taratura richiede una prova in acqua con tutti i componenti."
+    },
+    {
+      "id": "F",
+      "name": "Peso concentrato",
+      "use": "Bolognese con corrente moderata",
+      "detail": "Galleggiante 3 g; terminale 60 cm. Torpille e pallini per 2,60 g iniziali.",
+      "caution": "Controlla profondità, traiettoria e tenuta della postazione prima di modificare la piombatura."
+    }
+  ]
+}
