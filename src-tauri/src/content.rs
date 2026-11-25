@@ -302,6 +302,7 @@ mod tests {
                 end_at: "2026-01-01T14:00:00Z".into(),
                 target: String::new(),
                 forecast_snapshot: None,
+                previous_plan_id: None,
             };
             planner::persist(&pool, &scenario).await.unwrap();
             let previous: (String, String) =

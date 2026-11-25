@@ -10,3 +10,4 @@
 .planner-grid .forecast-opt{display:flex;gap:8px;align-items:center;grid-column:1/-1}.planner-grid .forecast-opt input{width:auto;margin:0}
 .location-map{position:relative;height:270px;border-radius:5px;overflow:hidden}.location-map span{position:absolute;bottom:0;left:0;right:0;background:#fff9;padding:5px;font-size:9px;color:#47665b}
 .export-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.comparison{margin-top:14px;padding:13px;background:#f7faf7;border:1px solid #d8e5dc;border-radius:4px}.comparison h4{font-size:13px;margin:0}.text-button{background:none;border:0;color:#285e57;text-decoration:underline;padding:0;font-size:inherit}

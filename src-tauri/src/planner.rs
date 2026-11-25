@@ -1,7 +1,7 @@
 use crate::AppError;
 use serde::{Deserialize, Serialize};
 
-const ENGINE_VERSION: &str = "1";
+const ENGINE_VERSION: &str = "2";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Scenario {
     pub technique: String,
@@ -15,6 +15,8 @@ pub struct Scenario {
     pub target: String,
     #[serde(default)]
     pub forecast_snapshot: Option<serde_json::Value>,
+    #[serde(default)]
+    pub previous_plan_id: Option<i64>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -36,7 +38,7 @@ struct RulePackage {
     source: String,
     rules: Vec<Rule>,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Recommendation {
     rig_id: String,
     reason: String,
@@ -45,12 +47,23 @@ pub struct Recommendation {
     source: String,
     evidence: String,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Comparison {
+    previous_plan_id: i64,
+    added: Vec<String>,
+    removed: Vec<String>,
+    unchanged: Vec<String>,
+    changed_inputs: Vec<String>,
+    content_changed: bool,
+}
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Evaluation {
     recommendations: Vec<Recommendation>,
     warnings: Vec<String>,
     engine_version: String,
     content_version: String,
+    #[serde(default)]
+    comparison: Option<Comparison>,
 }
 fn invalid(message: &str) -> AppError {
     AppError {
@@ -193,15 +206,96 @@ pub(crate) fn evaluate(
         warnings,
         engine_version: ENGINE_VERSION.into(),
         content_version: bundle.content_version.clone(),
+        comparison: None,
     })
 }
+async fn add_comparison(
+    pool: &sqlx::SqlitePool,
+    scenario: &Scenario,
+    bundle: &crate::content::Bundle,
+    result: &mut Evaluation,
+) -> Result<(), AppError> {
+    let Some(id) = scenario.previous_plan_id else {
+        return Ok(());
+    };
+    let previous: Option<(String, String, String)> =
+        sqlx::query_as("SELECT scenario_json,result_json,rules_json FROM plans WHERE id=?")
+            .bind(id)
+            .fetch_optional(pool)
+            .await
+            .map_err(AppError::database)?;
+    let (old_input, old_result, old_content) =
+        previous.ok_or_else(|| invalid("Piano di riferimento non trovato."))?;
+    let old: Scenario = serde_json::from_str(&old_input)
+        .map_err(|_| invalid("Scenario precedente non leggibile."))?;
+    let old_result: Evaluation = serde_json::from_str(&old_result)
+        .map_err(|_| invalid("Risultato precedente non leggibile."))?;
+    let old_content: serde_json::Value = serde_json::from_str(&old_content)
+        .map_err(|_| invalid("Contenuti precedenti non leggibili."))?;
+    let old_package = old_content
+        .get("package_id")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("lazio-iniziale");
+    let old_ids: std::collections::BTreeSet<String> = old_result
+        .recommendations
+        .iter()
+        .map(|r| r.rig_id.clone())
+        .collect();
+    let new_ids: std::collections::BTreeSet<String> = result
+        .recommendations
+        .iter()
+        .map(|r| r.rig_id.clone())
+        .collect();
+    let mut changed = Vec::new();
+    if old.condition != scenario.condition {
+        changed.push("condizioni".into());
+    }
+    if old.condition_origin != scenario.condition_origin {
+        changed.push("origine delle condizioni".into());
+    }
+    if old.technique != scenario.technique {
+        changed.push("tecnica".into());
+    }
+    if old.fixed_rig != scenario.fixed_rig {
+        changed.push("montatura fissata".into());
+    }
+    if old.casting_limit_g != scenario.casting_limit_g {
+        changed.push("potenza della canna".into());
+    }
+    if old.location != scenario.location {
+        changed.push("settore".into());
+    }
+    if old.start_at != scenario.start_at || old.end_at != scenario.end_at {
+        changed.push("finestra oraria".into());
+    }
+    if old.target != scenario.target {
+        changed.push("specie annotata".into());
+    }
+    if old.forecast_snapshot != scenario.forecast_snapshot {
+        changed.push("dati meteo allegati".into());
+    }
+    result.comparison = Some(Comparison {
+        previous_plan_id: id,
+        added: new_ids.difference(&old_ids).cloned().collect(),
+        removed: old_ids.difference(&new_ids).cloned().collect(),
+        unchanged: new_ids.intersection(&old_ids).cloned().collect(),
+        changed_inputs: changed,
+        content_changed: old_package != bundle.package_id
+            || old_result.content_version != bundle.content_version
+            || old_result.engine_version != result.engine_version,
+    });
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn evaluate_scenario(
     pool: tauri::State<'_, sqlx::SqlitePool>,
     scenario: Scenario,
 ) -> Result<Evaluation, AppError> {
     let bundle = crate::content::active(pool.inner()).await?;
-    evaluate(&scenario, &bundle)
+    let mut result = evaluate(&scenario, &bundle)?;
+    add_comparison(pool.inner(), &scenario, &bundle, &mut result).await?;
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -219,6 +313,7 @@ mod tests {
             end_at: "2026-01-01T14:00:00Z".into(),
             target: String::new(),
             forecast_snapshot: None,
+            previous_plan_id: None,
         }
     }
     #[test]
@@ -291,6 +386,51 @@ mod tests {
         assert!(evaluate(&s, &crate::content::builtin().unwrap()).is_err());
     }
     #[test]
+    fn adaptation_compares_without_mutating_the_original() {
+        tauri::async_runtime::block_on(async {
+            let pool = sqlx::sqlite::SqlitePoolOptions::new()
+                .max_connections(1)
+                .connect("sqlite::memory:")
+                .await
+                .unwrap();
+            sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+            let mut first = scenario();
+            first.condition = "calmo".into();
+            first.casting_limit_g = None;
+            persist(&pool, &first).await.unwrap();
+            let before: String = sqlx::query_scalar("SELECT result_json FROM plans WHERE id=1")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let mut next = first.clone();
+            next.condition = "mosso_lavorabile".into();
+            next.condition_origin = "osservazione".into();
+            next.previous_plan_id = Some(1);
+            let evaluation = persist(&pool, &next).await.unwrap();
+            let comparison = evaluation.comparison.unwrap();
+            assert_eq!(comparison.added, vec!["C", "D"]);
+            assert_eq!(comparison.removed, vec!["A", "B"]);
+            assert!(comparison
+                .changed_inputs
+                .contains(&"condizioni".to_string()));
+            assert!(!comparison.content_changed);
+            let after: String = sqlx::query_scalar("SELECT result_json FROM plans WHERE id=1")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            assert_eq!(before, after);
+            next.previous_plan_id = Some(999);
+            assert!(persist(&pool, &next).await.is_err());
+            assert_eq!(
+                sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM plans")
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap(),
+                2
+            );
+        });
+    }
+    #[test]
     fn saved_plan_creates_linked_trip_atomically() {
         tauri::async_runtime::block_on(async {
             let pool = sqlx::sqlite::SqlitePoolOptions::new()
@@ -350,7 +490,8 @@ pub(crate) async fn persist(
     scenario: &Scenario,
 ) -> Result<Evaluation, AppError> {
     let bundle = crate::content::active(pool).await?;
-    let result = evaluate(scenario, &bundle)?;
+    let mut result = evaluate(scenario, &bundle)?;
+    add_comparison(pool, scenario, &bundle, &mut result).await?;
     let input = serde_json::to_string(scenario).map_err(|_| invalid("Scenario non valido."))?;
     let output = serde_json::to_string(&result).map_err(|_| invalid("Risultato non valido."))?;
     let snapshot = serde_json::to_string(&bundle).map_err(|_| invalid("Pacchetto non valido."))?;
