@@ -1,3 +1,4 @@
+mod backup;
 mod diary;
 mod weather;
 use serde::{Deserialize, Serialize};
@@ -89,7 +90,8 @@ pub fn run() {
             diary::add_catch,
             diary::set_outcome,
             weather::fetch_forecast,
-            weather::cached_forecast
+            weather::cached_forecast,
+            backup::backup_database
         ])
         .run(tauri::generate_context!())
         .expect("Errore avvio Sanpei");
