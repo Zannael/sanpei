@@ -61,6 +61,19 @@ pub struct NewPosition {
     pub origin: String,
     pub accuracy_m: Option<f64>,
 }
+#[derive(Serialize, sqlx::FromRow)]
+pub struct PlanLink {
+    pub plan_id: i64,
+    pub followed: String,
+    pub notes: String,
+}
+#[derive(Deserialize)]
+pub struct NewPlanLink {
+    pub trip_id: i64,
+    pub plan_id: i64,
+    pub followed: String,
+    pub notes: String,
+}
 #[derive(Serialize)]
 pub struct Details {
     pub rods: Vec<Rod>,
@@ -68,6 +81,7 @@ pub struct Details {
     pub catches: Vec<Catch>,
     pub observations: Vec<Observation>,
     pub positions: Vec<Position>,
+    pub plan: Option<PlanLink>,
 }
 #[derive(Deserialize)]
 pub struct NewInterval {
@@ -116,12 +130,20 @@ pub async fn trip_details(
     .await
     .map_err(AppError::database)?;
     let positions=sqlx::query_as::<_,Position>("SELECT id,role,latitude,longitude,origin,accuracy_m FROM trip_positions WHERE trip_id=? ORDER BY role").bind(trip_id).fetch_all(pool.inner()).await.map_err(AppError::database)?;
+    let plan = sqlx::query_as::<_, PlanLink>(
+        "SELECT plan_id,followed,notes FROM trip_plans WHERE trip_id=?",
+    )
+    .bind(trip_id)
+    .fetch_optional(pool.inner())
+    .await
+    .map_err(AppError::database)?;
     Ok(Details {
         rods,
         intervals,
         catches,
         observations,
         positions,
+        plan,
     })
 }
 #[tauri::command]
@@ -297,5 +319,26 @@ pub async fn save_position(
         return Err(invalid("Controlla posizione, origine e accuratezza."));
     }
     sqlx::query("INSERT INTO trip_positions(trip_id,role,latitude,longitude,origin,accuracy_m) VALUES (?,?,?,?,?,?) ON CONFLICT(trip_id,role) DO UPDATE SET latitude=excluded.latitude,longitude=excluded.longitude,origin=excluded.origin,accuracy_m=excluded.accuracy_m").bind(position.trip_id).bind(position.role).bind(position.latitude).bind(position.longitude).bind(position.origin).bind(position.accuracy_m).execute(pool.inner()).await.map_err(AppError::database)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn link_plan(
+    pool: tauri::State<'_, SqlitePool>,
+    link: NewPlanLink,
+) -> Result<(), AppError> {
+    if !["unknown", "yes", "partial", "no"].contains(&link.followed.as_str()) {
+        return Err(invalid("Stato del consiglio non valido."));
+    }
+    sqlx::query("INSERT INTO trip_plans(trip_id,plan_id,followed,notes) VALUES (?,?,?,?) ON CONFLICT(trip_id) DO UPDATE SET plan_id=excluded.plan_id,followed=excluded.followed,notes=excluded.notes").bind(link.trip_id).bind(link.plan_id).bind(link.followed).bind(link.notes.trim()).execute(pool.inner()).await.map_err(AppError::database)?;
+    Ok(())
+}
+#[tauri::command]
+pub async fn unlink_plan(pool: tauri::State<'_, SqlitePool>, trip_id: i64) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM trip_plans WHERE trip_id=?")
+        .bind(trip_id)
+        .execute(pool.inner())
+        .await
+        .map_err(AppError::database)?;
     Ok(())
 }

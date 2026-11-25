@@ -273,6 +273,40 @@ mod tests {
         assert!(evaluate(&s).is_err());
     }
     #[test]
+    fn saved_plan_creates_linked_trip_atomically() {
+        tauri::async_runtime::block_on(async {
+            let pool = sqlx::sqlite::SqlitePoolOptions::new()
+                .max_connections(1)
+                .connect("sqlite::memory:")
+                .await
+                .unwrap();
+            sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+            persist(&pool, &scenario()).await.unwrap();
+            let id = create_trip(&pool, 1).await.unwrap();
+            let link: (i64, String) =
+                sqlx::query_as("SELECT plan_id,followed FROM trip_plans WHERE trip_id=?")
+                    .bind(id)
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
+            assert_eq!(link, (1, "unknown".into()));
+            let location: String = sqlx::query_scalar("SELECT location FROM trips WHERE id=?")
+                .bind(id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            assert_eq!(location, "Santa Severa");
+            assert!(create_trip(&pool, 999).await.is_err());
+            assert_eq!(
+                sqlx::query_scalar::<_, i64>("SELECT count(*) FROM trips")
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap(),
+                1
+            );
+        });
+    }
+    #[test]
     fn unknown_conditions_do_not_invent_a_forecast() {
         let mut s = scenario();
         s.condition = "sconosciuto".into();
@@ -317,4 +351,59 @@ pub async fn list_plans(
     pool: tauri::State<'_, sqlx::SqlitePool>,
 ) -> Result<Vec<SavedPlan>, AppError> {
     sqlx::query_as::<_,SavedPlan>("SELECT id,created_at,scenario_json,result_json,engine_version,content_version FROM plans ORDER BY id DESC").fetch_all(pool.inner()).await.map_err(AppError::database)
+}
+
+async fn create_trip(pool: &sqlx::SqlitePool, plan_id: i64) -> Result<i64, AppError> {
+    let row: Option<(String, String)> =
+        sqlx::query_as("SELECT scenario_json,rules_json FROM plans WHERE id=?")
+            .bind(plan_id)
+            .fetch_optional(pool)
+            .await
+            .map_err(AppError::database)?;
+    let (scenario_json, contents) = row.ok_or_else(|| invalid("Piano non trovato."))?;
+    let scenario: Scenario = serde_json::from_str(&scenario_json)
+        .map_err(|_| invalid("Piano salvato non leggibile."))?;
+    if !crate::time::valid_utc(&scenario.start_at, true) {
+        return Err(invalid("La data del piano non è valida."));
+    }
+    let catalog: serde_json::Value = serde_json::from_str(&contents)
+        .map_err(|_| invalid("Contenuti del piano non leggibili."))?;
+    let location = catalog
+        .get("sectors")
+        .and_then(|x| x.get("sectors"))
+        .and_then(serde_json::Value::as_array)
+        .and_then(|a| {
+            a.iter().find(|item| {
+                item.get("id").and_then(serde_json::Value::as_str)
+                    == Some(scenario.location.as_str())
+            })
+        })
+        .and_then(|item| item.get("name"))
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("");
+    let mut tx = pool.begin().await.map_err(AppError::database)?;
+    let inserted = sqlx::query("INSERT INTO trips(title,starts_at,location) VALUES (?,?,?)")
+        .bind(format!("Uscita dal piano {plan_id}"))
+        .bind(&scenario.start_at)
+        .bind(location)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::database)?;
+    let trip_id = inserted.last_insert_rowid();
+    sqlx::query("INSERT INTO trip_plans(trip_id,plan_id) VALUES (?,?)")
+        .bind(trip_id)
+        .bind(plan_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::database)?;
+    tx.commit().await.map_err(AppError::database)?;
+    Ok(trip_id)
+}
+
+#[tauri::command]
+pub async fn create_trip_from_plan(
+    pool: tauri::State<'_, sqlx::SqlitePool>,
+    plan_id: i64,
+) -> Result<i64, AppError> {
+    create_trip(pool.inner(), plan_id).await
 }

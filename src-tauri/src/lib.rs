@@ -138,6 +138,8 @@ pub fn run() {
             diary::add_catch,
             diary::add_observation,
             diary::save_position,
+            diary::link_plan,
+            diary::unlink_plan,
             diary::delete_diary_item,
             diary::set_outcome,
             weather::fetch_forecast,
@@ -146,7 +148,8 @@ pub fn run() {
             backup::restore_database,
             planner::evaluate_scenario,
             planner::save_plan,
-            planner::list_plans
+            planner::list_plans,
+            planner::create_trip_from_plan
         ])
         .run(tauri::generate_context!())
         .expect("Errore avvio Sanpei");
