@@ -8,7 +8,7 @@
 - Diario iniziale: creazione/elenco uscite, canne, intervalli, catture, esito incompleto/zero/catture. I vincoli SQL vietano intervalli sovrapposti sulla stessa canna. Mancano modifica e cancellazione, pause, posizioni strutturate, allegati, osservazioni e calcoli dello sforzo.
 - Sei schede sintetiche preliminari in `content/lazio-rigs.v1.json`. Non sono un pacchetto scientifico completo né validato, e non includono tutte le misure.
 - Richiesta esplicita a Open-Meteo per meteo/mare con coordinate e cache locale. Mancano normalizzazione completa, astronomia, test del provider, gestione di tutte le finestre e attribuzioni puntuali dei modelli.
-- Pianificatore spiegabile, importazione/versionamento contenuti, ripristino ed esportazioni non implementati. È disponibile una copia SQLite verificata, senza sovrascrittura; la finestra di salvataggio non è ancora stata provata nella WebView. Non dichiarare nessuna fase T0–T5 completa.
+- Pianificatore spiegabile, importazione/versionamento contenuti ed esportazioni non implementati. Copia e ripristino SQLite sono disponibili; le finestre native non sono ancora state provate nella WebView. Non dichiarare nessuna fase T0–T5 completa.
 
 ## Verifiche e limiti
 
@@ -16,7 +16,7 @@
 - La prima versione del processo Tauri è stata avviata. La mappa e la navigazione sono state verificate visivamente nel browser, non ancora nella WebView Tauri; il diario e la persistenza dopo riavvio non sono stati verificati nell’app desktop.
 - `pnpm tauri build --bundles deb` ha creato il pacchetto Debian; installazione pulita e funzionamento del pacchetto non sono stati provati.
 - La ricerca originale resta esterna al repository; fonti primarie, licenze e coordinate delle postazioni non sono state ancora riverificate. Anomalia Pomezia A002 sospesa.
-- La copia SQLite è verificata da test su disco; il ripristino guidato non è ancora disponibile. Non usare l’app per dati insostituibili senza copie esterne e un ripristino verificato.
+- Copia e ripristino SQLite sono verificati da test su disco; le finestre native e il flusso end-to-end restano da provare.
 - I controlli privacy automatici richiedono sempre una revisione manuale; non inserire dati personali o PDF nel repository.
 
 ## Prossimo compito

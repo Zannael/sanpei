@@ -16,6 +16,6 @@ Controlli: `pnpm build`, `cargo test --manifest-path src-tauri/Cargo.toml`, `car
 
 ## Dati e fonti
 
-Il diario è salvato nella directory dati dell'applicazione del sistema, fuori dal repository. La schermata dati crea una copia SQLite verificata del diario; il ripristino guidato e le esportazioni non sono ancora disponibili. Non inserire dati personali, foto, credenziali o il materiale originale della ricerca nel repository. Le schede sono sintesi preliminari di una ricerca critica del 24 novembre 2026, da verificare rispetto alle fonti originali. Le indicazioni locali non certificano accessibilità o sicurezza alimentare.
+Il diario è salvato nella directory dati dell'applicazione del sistema, fuori dal repository. La schermata dati crea e ripristina copie SQLite. Il ripristino accetta solo lo stesso schema e conserva prima una copia di recupero nella cartella dati dell’app. Le esportazioni non sono ancora disponibili. Non inserire dati personali, foto, credenziali o il materiale originale della ricerca nel repository. Le schede sono sintesi preliminari di una ricerca critica del 24 novembre 2026, da verificare rispetto alle fonti originali. Le indicazioni locali non certificano accessibilità o sicurezza alimentare.
 
 Il codice è distribuito con licenza MIT. Diritti e attribuzioni dei contenuti esterni sono verificati separatamente prima della distribuzione.
