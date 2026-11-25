@@ -121,10 +121,8 @@ pub async fn add_interval(
     pool: tauri::State<'_, SqlitePool>,
     interval: NewInterval,
 ) -> Result<(), AppError> {
-    if interval.starts_at.len() != 20
-        || interval.ends_at.len() != 20
-        || !interval.starts_at.ends_with('Z')
-        || !interval.ends_at.ends_with('Z')
+    if !crate::time::valid_utc(&interval.starts_at, true)
+        || !crate::time::valid_utc(&interval.ends_at, true)
         || interval.starts_at >= interval.ends_at
     {
         return Err(invalid("Controlla inizio e fine dell'intervallo."));
@@ -152,7 +150,7 @@ pub async fn add_catch(
     catch: NewCatch,
 ) -> Result<(), AppError> {
     if catch.species.trim().is_empty()
-        || catch.occurred_at.is_empty()
+        || !crate::time::valid_utc(&catch.occurred_at, true)
         || !["released", "kept", "unknown"].contains(&catch.disposition.as_str())
         || catch.length_cm.is_some_and(|x| !x.is_finite() || x <= 0.0)
         || catch.weight_g.is_some_and(|x| !x.is_finite() || x <= 0.0)
@@ -200,7 +198,8 @@ pub async fn add_observation(
     pool: tauri::State<'_, SqlitePool>,
     observation: NewObservation,
 ) -> Result<(), AppError> {
-    if observation.kind.trim().is_empty() || observation.occurred_at.trim().is_empty() {
+    if observation.kind.trim().is_empty() || !crate::time::valid_utc(&observation.occurred_at, true)
+    {
         return Err(invalid("Inserisci tipo e ora dell'osservazione."));
     }
     sqlx::query("INSERT INTO observations (trip_id,occurred_at,kind,notes) VALUES (?,?,?,?)")

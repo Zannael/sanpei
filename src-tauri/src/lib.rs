@@ -1,5 +1,6 @@
 mod backup;
 mod diary;
+mod time;
 mod weather;
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -44,7 +45,7 @@ async fn list_trips(pool: tauri::State<'_, SqlitePool>) -> Result<Vec<Trip>, App
 }
 #[tauri::command]
 async fn create_trip(pool: tauri::State<'_, SqlitePool>, trip: NewTrip) -> Result<(), AppError> {
-    if trip.title.trim().is_empty() || trip.starts_at.trim().is_empty() {
+    if trip.title.trim().is_empty() || !time::valid_utc(&trip.starts_at, false) {
         return Err(AppError {
             code: "invalid_trip",
             message: "Inserisci un titolo e una data.".into(),
@@ -66,7 +67,7 @@ async fn update_trip(
     trip_id: i64,
     trip: NewTrip,
 ) -> Result<(), AppError> {
-    if trip.title.trim().is_empty() || trip.starts_at.trim().is_empty() {
+    if trip.title.trim().is_empty() || !time::valid_utc(&trip.starts_at, false) {
         return Err(AppError {
             code: "invalid_trip",
             message: "Inserisci un titolo e una data.".into(),
