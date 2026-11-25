@@ -170,7 +170,7 @@ mod tests {
 
 // Only the schema explicitly handled below is accepted. A later migration must
 // extend the copy list and its tests before restore is enabled for that schema.
-const RESTORE_SCHEMA_VERSION: i64 = 3;
+const RESTORE_SCHEMA_VERSION: i64 = 4;
 
 async fn restore(pool: &SqlitePool, source: &Path, recovery_dir: &Path) -> Result<(), AppError> {
     let source = std::fs::canonicalize(source)
@@ -214,13 +214,14 @@ async fn restore(pool: &SqlitePool, source: &Path, recovery_dir: &Path) -> Resul
             let recovery = recovery_dir.join(format!("before-restore-{nonce}.sqlite3"));
             snapshot(pool, &recovery).await?;
             for statement in [
-                "DELETE FROM intervals", "DELETE FROM catches", "DELETE FROM observations", "DELETE FROM rods", "DELETE FROM trips", "DELETE FROM forecast_cache",
+                "DELETE FROM plans", "DELETE FROM intervals", "DELETE FROM catches", "DELETE FROM observations", "DELETE FROM rods", "DELETE FROM trips", "DELETE FROM forecast_cache",
                 "INSERT INTO trips(id,title,starts_at,location,notes,outcome,created_at) SELECT id,title,starts_at,location,notes,outcome,created_at FROM imported.trips",
                 "INSERT INTO rods(id,trip_id,name) SELECT id,trip_id,name FROM imported.rods",
                 "INSERT INTO intervals(id,rod_id,starts_at,ends_at,rig,bait) SELECT id,rod_id,starts_at,ends_at,rig,bait FROM imported.intervals ORDER BY id",
                 "INSERT INTO catches(id,trip_id,occurred_at,species,uncertain,length_cm,weight_g,weight_estimated,disposition) SELECT id,trip_id,occurred_at,species,uncertain,length_cm,weight_g,weight_estimated,disposition FROM imported.catches",
                 "INSERT INTO observations(id,trip_id,occurred_at,kind,notes) SELECT id,trip_id,occurred_at,kind,notes FROM imported.observations",
                 "INSERT INTO forecast_cache(latitude,longitude,weather,marine,retrieved_at) SELECT latitude,longitude,weather,marine,retrieved_at FROM imported.forecast_cache",
+                "INSERT INTO plans(id,created_at,scenario_json,result_json,rules_json,engine_version,content_version) SELECT id,created_at,scenario_json,result_json,rules_json,engine_version,content_version FROM imported.plans",
             ] { sqlx::query(statement).execute(&mut *conn).await.map_err(AppError::database)?; }
             sqlx::query("COMMIT").execute(&mut *conn).await.map_err(AppError::database)?;
             Ok(())
@@ -231,6 +232,127 @@ async fn restore(pool: &SqlitePool, source: &Path, recovery_dir: &Path) -> Resul
     let _ = sqlx::query("DETACH DATABASE imported")
         .execute(&mut *conn)
         .await;
+    result
+}
+
+// Backups from schema 3 are upgraded on a private disposable copy. The
+// original file is never modified, and unknown/future schemas are rejected.
+async fn normalize_and_restore(
+    pool: &SqlitePool,
+    source: &Path,
+    recovery_dir: &Path,
+) -> Result<(), AppError> {
+    let source = std::fs::canonicalize(source)
+        .map_err(|_| error("invalid_backup", "File non disponibile."))?;
+    let current_path: String =
+        sqlx::query_scalar("SELECT file FROM pragma_database_list WHERE name='main'")
+            .fetch_one(pool)
+            .await
+            .map_err(AppError::database)?;
+    if std::fs::canonicalize(current_path).ok().as_ref() == Some(&source) {
+        return Err(error(
+            "invalid_backup",
+            "Scegli una copia, non il database attualmente in uso.",
+        ));
+    }
+    let source_db = SqlitePool::connect_with(
+        SqliteConnectOptions::new()
+            .filename(&source)
+            .read_only(true)
+            .foreign_keys(true),
+    )
+    .await
+    .map_err(|_| error("invalid_backup", "Impossibile aprire il backup."))?;
+    let current: Vec<(i64, Vec<u8>, bool)> =
+        sqlx::query_as("SELECT version,checksum,success FROM _sqlx_migrations ORDER BY version")
+            .fetch_all(pool)
+            .await
+            .map_err(AppError::database)?;
+    let incoming: Vec<(i64, Vec<u8>, bool)> =
+        sqlx::query_as("SELECT version,checksum,success FROM _sqlx_migrations ORDER BY version")
+            .fetch_all(&source_db)
+            .await
+            .map_err(|_| {
+                error(
+                    "invalid_backup",
+                    "Il file non è un backup Sanpei compatibile.",
+                )
+            })?;
+    if incoming.is_empty()
+        || incoming.len() > current.len()
+        || incoming != current[..incoming.len()]
+        || incoming.last().map(|x| x.0) < Some(3)
+        || incoming.iter().any(|x| !x.2)
+    {
+        return Err(error(
+            "incompatible_backup",
+            "La versione del backup non è compatibile con questa app.",
+        ));
+    }
+    let integrity: String = sqlx::query_scalar("PRAGMA integrity_check")
+        .fetch_one(&source_db)
+        .await
+        .map_err(AppError::database)?;
+    if integrity != "ok"
+        || sqlx::query("PRAGMA foreign_key_check")
+            .fetch_optional(&source_db)
+            .await
+            .map_err(AppError::database)?
+            .is_some()
+    {
+        return Err(error(
+            "invalid_backup",
+            "Il backup non ha superato i controlli di integrità.",
+        ));
+    }
+    std::fs::create_dir_all(recovery_dir)
+        .map_err(|_| error("backup_failed", "Impossibile creare la cartella di lavoro."))?;
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| error("clock_error", "Orologio non disponibile."))?
+        .as_nanos();
+    let tempdir = recovery_dir.join(format!(".restore-{}-{nonce}", std::process::id()));
+    std::fs::create_dir(&tempdir).map_err(|_| {
+        error(
+            "backup_failed",
+            "Impossibile creare la cartella temporanea.",
+        )
+    })?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if std::fs::set_permissions(&tempdir, std::fs::Permissions::from_mode(0o700)).is_err() {
+            let _ = std::fs::remove_dir(&tempdir);
+            return Err(error(
+                "backup_failed",
+                "Impossibile proteggere la cartella temporanea.",
+            ));
+        }
+    }
+    let copied = tempdir.join("normalized.sqlite3");
+    let result = async {
+        snapshot(&source_db, &copied).await?;
+        source_db.close().await;
+        let copy = SqlitePool::connect_with(
+            SqliteConnectOptions::new()
+                .filename(&copied)
+                .foreign_keys(true),
+        )
+        .await
+        .map_err(AppError::database)?;
+        let migration = sqlx::migrate!("./migrations").run(&copy).await;
+        copy.close().await;
+        migration.map_err(|_| {
+            error(
+                "incompatible_backup",
+                "Impossibile aggiornare la copia del backup.",
+            )
+        })?;
+        restore(pool, &copied, recovery_dir).await
+    }
+    .await;
+    let _ = std::fs::remove_file(&copied);
+    let _ = std::fs::remove_dir(&tempdir);
     result
 }
 
@@ -257,7 +379,7 @@ pub async fn restore_database(
         .app_data_dir()
         .map_err(|_| error("invalid_path", "Cartella dati non disponibile."))?
         .join("recovery");
-    restore(pool.inner(), file.path(), &directory).await?;
+    normalize_and_restore(pool.inner(), file.path(), &directory).await?;
     Ok(true)
 }
 
@@ -292,12 +414,14 @@ mod restore_tests {
             .await
             .unwrap();
             sqlx::query("INSERT INTO observations(trip_id,occurred_at,kind,notes) VALUES (1,'2026-01-01T01:00:00Z','mare','sintetico')").execute(&db).await.unwrap();
+            sqlx::query("INSERT INTO plans(scenario_json,result_json,rules_json,engine_version,content_version) VALUES ('{}','{}','{}','1','test')").execute(&db).await.unwrap();
             let original = dir.join("backup.sqlite3");
             snapshot(&db, &original).await.unwrap();
             sqlx::query("UPDATE trips SET title='changed'")
                 .execute(&db)
                 .await
                 .unwrap();
+            sqlx::query("DELETE FROM plans").execute(&db).await.unwrap();
             sqlx::query("DELETE FROM observations")
                 .execute(&db)
                 .await
@@ -318,6 +442,13 @@ mod restore_tests {
                     .await
                     .unwrap(),
                 "sintetico"
+            );
+            assert_eq!(
+                sqlx::query_scalar::<_, String>("SELECT engine_version FROM plans")
+                    .fetch_one(&db)
+                    .await
+                    .unwrap(),
+                "1"
             );
             let invalid = dir.join("invalid.sqlite3");
             std::fs::write(&invalid, b"not sqlite").unwrap();
@@ -347,6 +478,83 @@ mod restore_tests {
             );
             let count = std::fs::read_dir(dir.join("recovery")).unwrap().count();
             assert_eq!(count, 1);
+            db.close().await;
+            std::fs::remove_dir_all(dir).unwrap();
+        });
+    }
+}
+
+#[cfg(test)]
+mod legacy_tests {
+    use super::*;
+    #[test]
+    fn old_backup_is_migrated_on_copy_and_original_is_untouched() {
+        tauri::async_runtime::block_on(async {
+            let dir = std::env::temp_dir().join(format!(
+                "sanpei-legacy-{}-{}",
+                std::process::id(),
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            std::fs::create_dir(&dir).unwrap();
+            let db = SqlitePool::connect_with(
+                SqliteConnectOptions::new()
+                    .filename(dir.join("live.sqlite3"))
+                    .create_if_missing(true)
+                    .foreign_keys(true),
+            )
+            .await
+            .unwrap();
+            sqlx::migrate!("./migrations").run(&db).await.unwrap();
+            sqlx::query(
+                "INSERT INTO trips(title,starts_at) VALUES ('original','2026-01-01T00:00:00Z')",
+            )
+            .execute(&db)
+            .await
+            .unwrap();
+            let old = dir.join("old.sqlite3");
+            snapshot(&db, &old).await.unwrap();
+            let old_db = SqlitePool::connect_with(SqliteConnectOptions::new().filename(&old))
+                .await
+                .unwrap();
+            sqlx::query("DROP TABLE plans")
+                .execute(&old_db)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM _sqlx_migrations WHERE version=4")
+                .execute(&old_db)
+                .await
+                .unwrap();
+            old_db.close().await;
+            sqlx::query("UPDATE trips SET title='changed'")
+                .execute(&db)
+                .await
+                .unwrap();
+            normalize_and_restore(&db, &old, &dir.join("recovery"))
+                .await
+                .unwrap();
+            assert_eq!(
+                sqlx::query_scalar::<_, String>("SELECT title FROM trips")
+                    .fetch_one(&db)
+                    .await
+                    .unwrap(),
+                "original"
+            );
+            let old_db = SqlitePool::connect_with(
+                SqliteConnectOptions::new().filename(&old).read_only(true),
+            )
+            .await
+            .unwrap();
+            assert_eq!(
+                sqlx::query_scalar::<_, i64>("SELECT MAX(version) FROM _sqlx_migrations")
+                    .fetch_one(&old_db)
+                    .await
+                    .unwrap(),
+                3
+            );
+            old_db.close().await;
             db.close().await;
             std::fs::remove_dir_all(dir).unwrap();
         });

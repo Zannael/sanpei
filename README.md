@@ -12,10 +12,10 @@ git config core.hooksPath scripts/hooks
 pnpm tauri dev
 ```
 
-Controlli: `pnpm build`, `cargo test --manifest-path src-tauri/Cargo.toml`, `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings` e `pnpm privacy`. Per creare il pacchetto Debian: `pnpm tauri build --bundles deb`.
+Controlli: `pnpm test`, `pnpm build`, `cargo test --manifest-path src-tauri/Cargo.toml`, `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings` e `pnpm privacy`. Per creare il pacchetto Debian: `pnpm tauri build --bundles deb`.
 
 ## Dati e fonti
 
-Il diario è salvato nella directory dati dell'applicazione del sistema, fuori dal repository. La schermata dati crea e ripristina copie SQLite. Il ripristino accetta solo lo stesso schema e conserva prima una copia di recupero nella cartella dati dell’app. Le esportazioni non sono ancora disponibili. Non inserire dati personali, foto, credenziali o il materiale originale della ricerca nel repository. Le schede sono sintesi preliminari di una ricerca critica del 24 novembre 2026, da verificare rispetto alle fonti originali. Le indicazioni locali non certificano accessibilità o sicurezza alimentare.
+Il diario è salvato nella directory dati dell'applicazione del sistema, fuori dal repository. La schermata dati crea e ripristina copie SQLite. Il ripristino verifica lo schema e conserva prima una copia di recupero nella cartella dati dell’app; le copie compatibili dello schema precedente vengono migrate su un duplicato. Le esportazioni non sono ancora disponibili. Non inserire dati personali, foto, credenziali o il materiale originale della ricerca nel repository. Le schede sono sintesi preliminari di una ricerca critica del 24 novembre 2026, da verificare rispetto alle fonti originali. Le indicazioni locali non certificano accessibilità o sicurezza alimentare.
 
 Il codice è distribuito con licenza MIT. Diritti e attribuzioni dei contenuti esterni sono verificati separatamente prima della distribuzione.

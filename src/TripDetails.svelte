@@ -1,5 +1,6 @@
 <script lang="ts">
  import {invoke} from '@tauri-apps/api/core';
+ import {romeToUtc} from './rome.js';
  export let tripId:number;
  export let initialOutcome:string;
  export let onChanged:()=>void;
@@ -9,16 +10,16 @@
  $: if(tripId!==loadedId){loadedId=tripId;outcome=initialOutcome;load()}
  async function load(){try{data=await invoke('trip_details',{tripId}); error=''; if(!data.rods.some(x=>x.id===rodId))rodId=data.rods[0]?.id || 0;}catch{error='Impossibile caricare i dettagli.'}}
  async function action(command:string,args:Record<string,unknown>){try{await invoke(command,args); await load();onChanged();}catch(e){error=typeof e==='object'&&e!==null&&'message' in e?String(e.message):'Impossibile salvare i dati.';}}
- async function saveObservation(){if(!observedAt){error='Inserisci l’ora dell’osservazione.';return} await action('add_observation',{observation:{trip_id:tripId,occurred_at:utc(observedAt),kind:observationKind,notes:observationNotes}})}
- function utc(s:string){return new Date(s).toISOString().replace('.000Z','Z')}
+ async function saveObservation(){if(!observedAt){error='Inserisci l’ora dell’osservazione.';return} try{await action('add_observation',{observation:{trip_id:tripId,occurred_at:utc(observedAt),kind:observationKind,notes:observationNotes}})}catch(e){error=e instanceof Error?e.message:'Ora non valida.'}}
+ function utc(s:string){return romeToUtc(s)}
  function display(s:string){return new Intl.DateTimeFormat('it-IT',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Rome'}).format(new Date(s))}
  async function remove(kind:string,id:number) { if(!confirm('Eliminare questo elemento? L’operazione non si può annullare.'))return; await action('delete_diary_item',{tripId,itemId:id,kind}); }
  async function saveRod(){await action('add_rod',{tripId,name:rodName});rodName=''}
- async function saveInterval(){if(!start||!end||!rodId){error='Seleziona canna, inizio e fine.';return} await action('add_interval',{interval:{rod_id:Number(rodId),starts_at:utc(start),ends_at:utc(end),rig,bait}})}
- async function saveCatch(){if(!caughtAt||!species.trim()){error='Inserisci specie e ora.';return}await action('add_catch',{catch:{trip_id:tripId,occurred_at:utc(caughtAt),species,uncertain,length_cm:length?Number(length):null,weight_g:weight?Number(weight):null,weight_estimated:weightEstimated,disposition}})}
+ async function saveInterval(){if(!start||!end||!rodId){error='Seleziona canna, inizio e fine.';return} try{await action('add_interval',{interval:{rod_id:Number(rodId),starts_at:utc(start),ends_at:utc(end),rig,bait}})}catch(e){error=e instanceof Error?e.message:'Ora non valida.'}}
+ async function saveCatch(){if(!caughtAt||!species.trim()){error='Inserisci specie e ora.';return}try{await action('add_catch',{catch:{trip_id:tripId,occurred_at:utc(caughtAt),species,uncertain,length_cm:length?Number(length):null,weight_g:weight?Number(weight):null,weight_estimated:weightEstimated,disposition}})}catch(e){error=e instanceof Error?e.message:'Ora non valida.'}}
 </script>
 <div class="trip-details">
-<h3>Dettagli dell’uscita</h3>
+<h3>Dettagli dell’uscita</h3><p class="source">Gli orari sono riferiti a Roma.</p>
 {#if error}<p class="error" role="alert">{error}</p>{/if}
 <div class="detail-columns"><section><h4>Canne e intervalli</h4><form on:submit|preventDefault={saveRod} class="compact-form"><label>Nome della canna<input bind:value={rodName} required placeholder="Canna 1"></label><button type="submit">Aggiungi canna</button></form>
 {#each data.rods as rod}<div class="detail-row"><strong>{rod.name}</strong> <button type="button" on:click={() => remove('rod',rod.id)}>Elimina canna e intervalli</button></div>{/each}

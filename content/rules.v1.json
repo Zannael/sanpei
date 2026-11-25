@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "content_version": "0.1.0",
+  "source": "Ricerca critica Lazio, 24 novembre 2026, sezioni 6 e 11–14",
+  "rules": [
+    {
+      "rig_id": "A",
+      "technique": "fondo",
+      "condition": "calmo",
+      "sink_g": 60,
+      "reason": "Presentazione leggera su sabbia con corrente contenuta.",
+      "risk": "L’esca delicata può deteriorarsi o il piombo può derivare.",
+      "check": "Controlla tenuta del piombo, esca e massa totale del lancio.",
+      "evidence": "operativa"
+    },
+    {
+      "rig_id": "B",
+      "technique": "fondo",
+      "condition": "calmo",
+      "sink_g": 80,
+      "reason": "Scorrevole per un boccone più consistente in mare calmo o poco mosso.",
+      "risk": "Attrito, corrente o un nodo voluminoso possono limitare lo scorrimento.",
+      "check": "Verifica lo scorrimento e che il piombo non resti imprigionato.",
+      "evidence": "operativa"
+    },
+    {
+      "rig_id": "C",
+      "technique": "fondo",
+      "condition": "mosso_lavorabile",
+      "sink_g": 125,
+      "reason": "Due braccioli corti per un moto ondoso lavorabile quando assetti lunghi si aggrovigliano.",
+      "risk": "Alghe e corrente possono impedire una presentazione efficace.",
+      "check": "Controlla sicurezza della postazione, tenuta e compatibilità dell’attrezzatura.",
+      "evidence": "operativa"
+    },
+    {
+      "rig_id": "D",
+      "technique": "fondo",
+      "condition": "mosso_lavorabile",
+      "sink_g": 125,
+      "reason": "Un bracciolo per un boccone resistente con moto ondoso lavorabile.",
+      "risk": "Il bracciolo alto non garantisce che l’esca resti sollevata.",
+      "check": "Controlla il rilascio dell’eventuale clip e la massa totale lanciata.",
+      "evidence": "operativa"
+    },
+    {
+      "rig_id": "E",
+      "technique": "bolognese",
+      "condition": "calmo",
+      "sink_g": null,
+      "reason": "Spallinata aperta per discesa progressiva in acqua tranquilla.",
+      "risk": "Vento e profondità possono compromettere il controllo della passata.",
+      "check": "Sonda la traiettoria e tara il galleggiante con tutti i componenti.",
+      "evidence": "operativa"
+    },
+    {
+      "rig_id": "F",
+      "technique": "bolognese",
+      "condition": "corrente_moderata",
+      "sink_g": null,
+      "reason": "Peso concentrato per controllare la quota con corrente moderata.",
+      "risk": "Una trattenuta forte può alzare il terminale; la postazione deve restare sicura.",
+      "check": "Controlla profondità, filo esposto e traiettoria dell’esca.",
+      "evidence": "operativa"
+    }
+  ]
+}
