@@ -213,3 +213,36 @@ pub async fn add_observation(
         .map_err(AppError::database)?;
     Ok(())
 }
+
+#[tauri::command]
+pub async fn delete_diary_item(
+    pool: tauri::State<'_, SqlitePool>,
+    trip_id: i64,
+    item_id: i64,
+    kind: String,
+) -> Result<(), AppError> {
+    let query = match kind.as_str() {
+        "rod" => "DELETE FROM rods WHERE id=? AND trip_id=?",
+        "interval" => {
+            "DELETE FROM intervals WHERE id=? AND rod_id IN (SELECT id FROM rods WHERE trip_id=?)"
+        }
+        "catch" => "DELETE FROM catches WHERE id=? AND trip_id=?",
+        "observation" => "DELETE FROM observations WHERE id=? AND trip_id=?",
+        _ => return Err(invalid("Elemento non valido.")),
+    };
+    let mut tx = pool.begin().await.map_err(AppError::database)?;
+    let result = sqlx::query(query)
+        .bind(item_id)
+        .bind(trip_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::database)?;
+    if result.rows_affected() != 1 {
+        return Err(invalid("Elemento non trovato."));
+    }
+    if kind == "catch" {
+        sqlx::query("UPDATE trips SET outcome='incomplete' WHERE id=? AND outcome='catches' AND NOT EXISTS (SELECT 1 FROM catches WHERE trip_id=?)").bind(trip_id).bind(trip_id).execute(&mut *tx).await.map_err(AppError::database)?;
+    }
+    tx.commit().await.map_err(AppError::database)?;
+    Ok(())
+}

@@ -60,6 +60,50 @@ async fn create_trip(pool: tauri::State<'_, SqlitePool>, trip: NewTrip) -> Resul
         .map_err(AppError::database)?;
     Ok(())
 }
+#[tauri::command]
+async fn update_trip(
+    pool: tauri::State<'_, SqlitePool>,
+    trip_id: i64,
+    trip: NewTrip,
+) -> Result<(), AppError> {
+    if trip.title.trim().is_empty() || trip.starts_at.trim().is_empty() {
+        return Err(AppError {
+            code: "invalid_trip",
+            message: "Inserisci un titolo e una data.".into(),
+        });
+    }
+    let result = sqlx::query("UPDATE trips SET title=?,starts_at=?,location=?,notes=? WHERE id=?")
+        .bind(trip.title.trim())
+        .bind(trip.starts_at)
+        .bind(trip.location.trim())
+        .bind(trip.notes.trim())
+        .bind(trip_id)
+        .execute(pool.inner())
+        .await
+        .map_err(AppError::database)?;
+    if result.rows_affected() != 1 {
+        return Err(AppError {
+            code: "not_found",
+            message: "Uscita non trovata.".into(),
+        });
+    }
+    Ok(())
+}
+#[tauri::command]
+async fn delete_trip(pool: tauri::State<'_, SqlitePool>, trip_id: i64) -> Result<(), AppError> {
+    let result = sqlx::query("DELETE FROM trips WHERE id=?")
+        .bind(trip_id)
+        .execute(pool.inner())
+        .await
+        .map_err(AppError::database)?;
+    if result.rows_affected() != 1 {
+        return Err(AppError {
+            code: "not_found",
+            message: "Uscita non trovata.".into(),
+        });
+    }
+    Ok(())
+}
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -84,11 +128,14 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             list_trips,
             create_trip,
+            update_trip,
+            delete_trip,
             diary::trip_details,
             diary::add_rod,
             diary::add_interval,
             diary::add_catch,
             diary::add_observation,
+            diary::delete_diary_item,
             diary::set_outcome,
             weather::fetch_forecast,
             weather::cached_forecast,
@@ -156,6 +203,36 @@ mod tests {
             assert!(add(1, "2026-01-01T11:00:00Z", "2026-01-01T12:00:00Z")
                 .await
                 .is_ok());
+        });
+    }
+    #[test]
+    fn deleting_trip_removes_dependent_records() {
+        tauri::async_runtime::block_on(async {
+            let pool = database().await;
+            sqlx::query(
+                "INSERT INTO trips(title,starts_at) VALUES ('synthetic','2026-01-01T00:00:00Z')",
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+            sqlx::query("INSERT INTO rods(trip_id,name) VALUES (1,'test')")
+                .execute(&pool)
+                .await
+                .unwrap();
+            sqlx::query("INSERT INTO intervals(rod_id,starts_at,ends_at) VALUES (1,'2026-01-01T01:00:00Z','2026-01-01T02:00:00Z')").execute(&pool).await.unwrap();
+            sqlx::query("INSERT INTO observations(trip_id,occurred_at,kind) VALUES (1,'2026-01-01T01:00:00Z','mare')").execute(&pool).await.unwrap();
+            sqlx::query("INSERT INTO catches(trip_id,occurred_at,species,disposition) VALUES (1,'2026-01-01T01:00:00Z','test','released')").execute(&pool).await.unwrap();
+            sqlx::query("DELETE FROM trips WHERE id=1")
+                .execute(&pool)
+                .await
+                .unwrap();
+            for table in ["rods", "intervals", "observations", "catches"] {
+                let count: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {table}"))
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
+                assert_eq!(count, 0);
+            }
         });
     }
 }
