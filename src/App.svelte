@@ -5,12 +5,15 @@
   import TripDetails from './TripDetails.svelte';
   import Weather from './Weather.svelte';
   import rigContent from '../content/lazio-rigs.v1.json';
+  import sectorContent from '../content/lazio-sectors.v1.json';
   type Trip = { id:number; title:string; starts_at:string; location:string; notes:string; outcome:string };
   type Section = 'esplora' | 'pianifica' | 'diario' | 'dati';
   let section: Section = 'esplora';
   let trips: Trip[] = [];
   let title = '', date = '', location = '', notes = '', error = '', notice = '';
   let selectedRig = 'A';
+  let selectedRegion = 'Lazio';
+  let selectedSector = sectorContent.sectors[0];
   let selectedTrip: number | null = null;
   let editingTrip: number | null = null;
   let editTitle='', editDate='', editLocation='', editNotes='';
@@ -49,9 +52,10 @@
       <section class="page explore">
         <div class="page-heading"><div><p class="overline">La costa, con criterio</p><h1>Esplora il Lazio</h1><p class="lead">Luoghi, tecniche e osservazioni per preparare la prossima uscita.</p></div><span class="region-label">Italia <span>›</span> Lazio</span></div>
         <div class="explore-grid">
-          <ItalyMap />
+          <ItalyMap onSelect={(name) => selectedRegion=name} />
           <div class="research-panel"><div class="section-kicker">La ricerca</div><h2>Prima l’habitat,<br>poi la distanza.</h2><p>Una buona presentazione dell’esca e una postazione accessibile contano più di una regola universale sulla luna o sulla distanza di lancio.</p><div class="research-rule"></div><h3>Da verificare sul posto</h3><ul><li>Accesso e ordinanze del tratto</li><li>Onde, corrente e tenuta del piombo</li><li>Avvisi ambientali aggiornati</li></ul><p class="source">Sintesi operativa della ricerca Lazio, versione 1.0. Le condizioni locali e la sicurezza alimentare richiedono verifiche specifiche.</p></div>
         </div>
+        {#if selectedRegion === 'Lazio'}<section class="sectors"><div class="sectors-heading"><div><p class="small-label">Ricerca iniziale</p><h2>Settori da approfondire</h2><p>La ricerca descrive tratti candidati: queste schede non identificano postazioni precise né autorizzano l’accesso.</p></div></div><div class="sector-layout"><div class="sector-list">{#each sectorContent.sectors as sector}<button class:selected={selectedSector.id===sector.id} on:click={() => selectedSector=sector}>{sector.name}<span>›</span></button>{/each}</div><article class="sector-detail"><p class="small-label">Settore descritto · dati preliminari</p><h3>{selectedSector.name}</h3><h4>Habitat</h4><p>{selectedSector.habitat}</p><h4>Tecniche plausibili</h4><p>{selectedSector.techniques}</p><h4>Da verificare</h4><p>{selectedSector.caution}</p><p class="source">Ricerca critica Lazio, versione 1.0, 24 novembre 2026, sezioni 4–5. Evidenza operativa; fonti e geometrie da verificare. I dati ambientali non certificano il pescato.</p></article></div></section>{/if}
         <div class="bottom-callout"><div><span class="small-label">Il tuo quaderno</span><h2>Ogni uscita aggiunge contesto.</h2><p>Anche quando non si cattura nulla, un appunto può essere utile la prossima volta.</p></div><button class="primary" on:click={() => section='diario'}>Apri il diario <span>→</span></button></div>
       </section>
     {:else if section === 'pianifica'}

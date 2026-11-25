@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "content_version": "0.1.0",
+  "status": "draft",
+  "source": "Ricerca critica Lazio, 24 novembre 2026, sezioni 4 e 5",
+  "sectors": [
+    {"id":"santa-marinella", "name":"Santa Marinella / Capo Linaro", "habitat":"Costa aperta, margini rocciosi e tasche sabbiose da riconoscere sul posto.", "techniques":"Bolognese dove la postazione è accessibile; pesca a fondo nelle tasche sabbiose.", "caution":"Evitare porto, foce e zone interdette. Controllare accesso, mare e allerte algali."},
+    {"id":"santa-severa", "name":"Santa Severa", "habitat":"Arenili accessibili con fondo sabbioso.", "techniques":"Fondo leggero con mare tranquillo; surfcasting soltanto con moto ondoso lavorabile.", "caution":"Verificare foci, limiti della riserva, aree archeologiche e poligono."},
+    {"id":"campo-di-mare", "name":"Campo di Mare", "habitat":"Tratti sabbiosi esterni alle foci.", "techniques":"Pesca a fondo e confronto fra fasce accessibili.", "caution":"Verificare foci, aree protette e interdizioni locali."},
+    {"id":"palo-san-nicola", "name":"Palo / Marina di San Nicola", "habitat":"Sabbia e margini del misto da riconoscere localmente.", "techniques":"Pesca a fondo; valutare esche più resistenti se disturbate.", "caution":"Controllare incagli, fossi, accessi e concessioni; il fondo varia nel settore."},
+    {"id":"capocotta", "name":"Castel Fusano / Capocotta", "habitat":"Tratti di spiaggia, con condizioni e accessi variabili.", "techniques":"Pesca a fondo su sabbia secondo condizioni locali.", "caution":"Verificare singolo tratto, accessi, aree protette, avvisi e interdizioni."},
+    {"id":"torvaianica", "name":"Torvaianica", "habitat":"Spiagge sabbiose, con solchi e corrente da osservare.", "techniques":"Pesca a fondo o beach ledgering dove praticabile.", "caution":"Selezionare un segmento preciso, evitando le foci e controllando gli avvisi."},
+    {"id":"ardea", "name":"Marina di Ardea / Tor San Lorenzo", "habitat":"Spiagge e discontinuità costiere.", "techniques":"Pesca a fondo su sabbia, dove accessibile.", "caution":"Verificare corsi d’acqua, esclusioni, avvisi e ordinanze."},
+    {"id":"lavinio", "name":"Lido dei Pini / Lavinio", "habitat":"Sabbia e possibili margini di roccia, da verificare sul posto.", "techniques":"Pesca a fondo secondo il tratto e le condizioni.", "caution":"La ricerca suggerisce prudenza per alcuni tratti monitorati; controllare dati e divieti attuali."},
+    {"id":"anzio", "name":"Anzio Colonia e costa aperta", "habitat":"Sabbia e tratti misti da riconoscere localmente.", "techniques":"Pesca a fondo nei tratti accessibili.", "caution":"Escludere il porto e le aree interdette sotto le falesie; verificare accessi e avvisi."}
+  ]
+}
