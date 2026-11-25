@@ -153,6 +153,7 @@ pub fn run() {
             content::import_package,
             content::list_packages,
             content::activate_package,
+            content::activate_builtin,
             export::export_data,
             planner::save_plan,
             planner::list_plans,

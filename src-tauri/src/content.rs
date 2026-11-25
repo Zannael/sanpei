@@ -42,7 +42,7 @@ pub fn builtin() -> Result<Bundle, AppError> {
     Ok(Bundle {
         schema_version: 1,
         package_id: "lazio-iniziale".into(),
-        content_version: "0.1.0".into(),
+        content_version: "0.2.0".into(),
         region: "Lazio".into(),
         review_status: "draft".into(),
         parameters: Vec::new(),
@@ -53,6 +53,83 @@ pub fn builtin() -> Result<Bundle, AppError> {
         sectors: serde_json::from_str(include_str!("../../content/lazio-sectors.v1.json"))
             .map_err(|_| invalid("Settori iniziali non validi."))?,
     })
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DiagramBranch {
+    anchor_cm: f64,
+    length_cm: f64,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DiagramWeight {
+    height_cm: f64,
+    mass_g: f64,
+    #[serde(default)]
+    kind: Option<String>,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Diagram {
+    kind: String,
+    #[serde(default)]
+    main_cm: Option<f64>,
+    #[serde(default)]
+    terminal_cm: Option<f64>,
+    #[serde(default)]
+    float_g: Option<f64>,
+    #[serde(default)]
+    branches: Vec<DiagramBranch>,
+    #[serde(default)]
+    weights: Vec<DiagramWeight>,
+}
+fn validate_diagram(value: &serde_json::Value) -> Result<(), AppError> {
+    let d: Diagram = serde_json::from_value(value.clone())
+        .map_err(|_| invalid("Schema della montatura non valido."))?;
+    let positive = |n: f64| n.is_finite() && n > 0.0 && n <= 10000.0;
+    let valid = match d.kind.as_str() {
+        "bottom" => {
+            d.main_cm.is_some_and(positive)
+                && d.terminal_cm.is_none()
+                && d.float_g.is_none()
+                && d.weights.is_empty()
+                && !d.branches.is_empty()
+                && d.branches.len() <= 2
+                && d.branches.iter().all(|b| {
+                    b.anchor_cm.is_finite()
+                        && b.anchor_cm >= 0.0
+                        && b.anchor_cm <= d.main_cm.unwrap_or(0.0)
+                        && positive(b.length_cm)
+                })
+        }
+        "sliding" => {
+            d.main_cm.is_none()
+                && d.float_g.is_none()
+                && d.terminal_cm.is_some_and(positive)
+                && d.branches.is_empty()
+                && d.weights.is_empty()
+        }
+        "float" => {
+            d.main_cm.is_none()
+                && d.terminal_cm.is_some_and(positive)
+                && d.float_g.is_some_and(positive)
+                && d.branches.is_empty()
+                && !d.weights.is_empty()
+                && d.weights.len() <= 10
+                && d.weights.iter().all(|w| {
+                    positive(w.height_cm)
+                        && positive(w.mass_g)
+                        && w.kind
+                            .as_ref()
+                            .is_none_or(|kind| ["pellet", "torpille"].contains(&kind.as_str()))
+                })
+        }
+        _ => false,
+    };
+    if !valid {
+        return Err(invalid("Misure dello schema non valide o non supportate."));
+    }
+    Ok(())
 }
 fn items<'a>(
     value: &'a serde_json::Value,
@@ -96,6 +173,7 @@ fn items<'a>(
                 "caution",
                 "components",
                 "adjustments",
+                "diagram",
             ]
         } else {
             &["id", "name", "habitat", "techniques", "caution"]
@@ -119,6 +197,11 @@ fn items<'a>(
             })
         {
             return Err(invalid("Scheda incompleta o identificativo duplicato."));
+        }
+        if key == "rigs" {
+            if let Some(diagram) = item.get("diagram") {
+                validate_diagram(diagram)?;
+            }
         }
         if key == "rigs"
             && item
@@ -147,9 +230,7 @@ pub fn validate(bundle: &Bundle, imported: bool) -> Result<(), AppError> {
         || bundle.content_version.trim().is_empty()
         || bundle.content_version.len() > 40
         || !["draft", "reviewed"].contains(&bundle.review_status.as_str())
-        || (imported
-            && (bundle.review_status != "reviewed"
-                || (bundle.package_id == "lazio-iniziale" && bundle.content_version == "0.1.0")))
+        || (imported && bundle.review_status != "reviewed")
     {
         return Err(invalid(
             "Versione, regione o stato di revisione non supportati.",
@@ -226,6 +307,13 @@ pub async fn active_package(pool: tauri::State<'_, SqlitePool>) -> Result<Bundle
 }
 async fn store(pool: &SqlitePool, bundle: &Bundle) -> Result<(), AppError> {
     validate(bundle, true)?;
+    let initial = builtin()?;
+    if bundle.package_id == initial.package_id && bundle.content_version == initial.content_version
+    {
+        return Err(invalid(
+            "Identificativo e versione sono riservati alla ricerca iniziale.",
+        ));
+    }
     let json =
         serde_json::to_string(bundle).map_err(|_| invalid("Pacchetto non serializzabile."))?;
     let mut tx = pool.begin().await.map_err(AppError::database)?;
@@ -301,31 +389,33 @@ pub async fn activate_package(
     content_version: String,
 ) -> Result<(), AppError> {
     let mut tx = pool.begin().await.map_err(AppError::database)?;
-    if package_id == "lazio-iniziale" && content_version == "0.1.0" {
-        sqlx::query("UPDATE research_packages SET active=0 WHERE region='Lazio'")
-            .execute(&mut *tx)
-            .await
-            .map_err(AppError::database)?;
-    } else {
-        let raw:Option<String>=sqlx::query_scalar("SELECT bundle_json FROM research_packages WHERE package_id=? AND content_version=? AND region='Lazio'").bind(&package_id).bind(&content_version).fetch_optional(&mut *tx).await.map_err(AppError::database)?;
-        let bundle: Bundle =
-            serde_json::from_str(&raw.ok_or_else(|| invalid("Pacchetto non trovato."))?)
-                .map_err(|_| invalid("Pacchetto non leggibile."))?;
-        validate(&bundle, true)?;
-        sqlx::query("UPDATE research_packages SET active=0 WHERE region='Lazio'")
-            .execute(&mut *tx)
-            .await
-            .map_err(AppError::database)?;
-        sqlx::query(
-            "UPDATE research_packages SET active=1 WHERE package_id=? AND content_version=?",
-        )
+
+    let raw:Option<String>=sqlx::query_scalar("SELECT bundle_json FROM research_packages WHERE package_id=? AND content_version=? AND region='Lazio'").bind(&package_id).bind(&content_version).fetch_optional(&mut *tx).await.map_err(AppError::database)?;
+    let bundle: Bundle =
+        serde_json::from_str(&raw.ok_or_else(|| invalid("Pacchetto non trovato."))?)
+            .map_err(|_| invalid("Pacchetto non leggibile."))?;
+    validate(&bundle, true)?;
+    sqlx::query("UPDATE research_packages SET active=0 WHERE region='Lazio'")
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::database)?;
+    sqlx::query("UPDATE research_packages SET active=1 WHERE package_id=? AND content_version=?")
         .bind(package_id)
         .bind(content_version)
         .execute(&mut *tx)
         .await
         .map_err(AppError::database)?;
-    }
+
     tx.commit().await.map_err(AppError::database)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn activate_builtin(pool: tauri::State<'_, SqlitePool>) -> Result<(), AppError> {
+    sqlx::query("UPDATE research_packages SET active=0 WHERE region='Lazio'")
+        .execute(pool.inner())
+        .await
+        .map_err(AppError::database)?;
     Ok(())
 }
 
@@ -374,6 +464,11 @@ mod tests {
             invalid.content_version = "2".into();
             invalid.rules["rules"][0]["rig_id"] = serde_json::json!("missing");
             assert!(store(&pool, &invalid).await.is_err());
+            let mut malformed_diagram = first.clone();
+            malformed_diagram.content_version = "bad-diagram".into();
+            malformed_diagram.rigs["rigs"][0]["diagram"]["branches"][0]["anchor_cm"] =
+                serde_json::json!(9999);
+            assert!(store(&pool, &malformed_diagram).await.is_err());
             let mut unsupported = first.clone();
             unsupported.content_version = "2".into();
             unsupported.sectors["sectors"][0]["unsupported"] = serde_json::json!(true);

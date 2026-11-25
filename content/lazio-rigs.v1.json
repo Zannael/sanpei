@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "content_version": "0.2.0",
+  "content_version": "0.3.0",
   "status": "draft",
   "source": "Ricerca critica Lazio, 24 novembre 2026, sezioni 10–14",
   "rigs": [
@@ -16,7 +16,17 @@
         "Bracciolo 120 cm, nylon 0,20–0,22 mm; amo con apertura indicativa 4–6 mm.",
         "Piombo iniziale 60 g; intervallo operativo 40–80 g solo se il sistema lo consente."
       ],
-      "adjustments": "Per grovigli, prova bracciolo di 80 cm e/o diametro 0,23–0,25 mm. Se il piombo deriva, valuta prima forma e filo esposto."
+      "adjustments": "Per grovigli, prova bracciolo di 80 cm e/o diametro 0,23–0,25 mm. Se il piombo deriva, valuta prima forma e filo esposto.",
+      "diagram": {
+        "kind": "bottom",
+        "main_cm": 100,
+        "branches": [
+          {
+            "anchor_cm": 15,
+            "length_cm": 120
+          }
+        ]
+      }
     },
     {
       "id": "B",
@@ -30,7 +40,11 @@
         "Piombo iniziale 80–120 g; terminale 150 cm e diametro 0,26–0,30 mm.",
         "Amo robusto con apertura indicativa 7–10 mm, proporzionato al boccone."
       ],
-      "adjustments": "Per rotazioni, prova un terminale di 100 cm; controlla abrasione e scorrimento."
+      "adjustments": "Per rotazioni, prova un terminale di 100 cm; controlla abrasione e scorrimento.",
+      "diagram": {
+        "kind": "sliding",
+        "terminal_cm": 150
+      }
     },
     {
       "id": "C",
@@ -44,7 +58,21 @@
         "Braccioli 0,28–0,33 mm; ami con apertura indicativa 5–8 mm.",
         "Piombo iniziale 125 g, fino a 150 g solo quando necessario e compatibile con tutto il sistema."
       ],
-      "adjustments": "Con alghe o corrente prova un solo bracciolo; cambia settore se non riesci a mantenere l’esca pescante."
+      "adjustments": "Con alghe o corrente prova un solo bracciolo; cambia settore se non riesci a mantenere l’esca pescante.",
+      "diagram": {
+        "kind": "bottom",
+        "main_cm": 180,
+        "branches": [
+          {
+            "anchor_cm": 40,
+            "length_cm": 30
+          },
+          {
+            "anchor_cm": 120,
+            "length_cm": 35
+          }
+        ]
+      }
     },
     {
       "id": "D",
@@ -57,7 +85,17 @@
         "Trave 150 cm, snodo a 120 cm dal piombo, bracciolo 100 cm di nylon 0,30–0,35 mm.",
         "Piombo iniziale 125 g; amo robusto con apertura indicativa 8–12 mm."
       ],
-      "adjustments": "Se necessario riduci il bracciolo a 70–80 cm e regola nuovamente l’eventuale bait clip."
+      "adjustments": "Se necessario riduci il bracciolo a 70–80 cm e regola nuovamente l’eventuale bait clip.",
+      "diagram": {
+        "kind": "bottom",
+        "main_cm": 150,
+        "branches": [
+          {
+            "anchor_cm": 120,
+            "length_cm": 100
+          }
+        ]
+      }
     },
     {
       "id": "E",
@@ -70,7 +108,44 @@
         "Terminale 80 cm, diametro 0,14–0,16 mm; amo di apertura indicativa 2,5–4 mm per piccoli inneschi.",
         "Gruppi di pallini sopra la giunzione: 0,50 g a 140 cm; 0,30 g a 110 cm; 0,20 g a 80 cm; 0,15 g a 55 cm; 0,10 g a 30 cm; 0,05 g a 10 cm. Totale iniziale 1,30 g."
       ],
-      "adjustments": "Tarare in acqua con girella, amo ed esca montati; sondare la traiettoria e correggere la profondità a piccoli incrementi."
+      "adjustments": "Tarare in acqua con girella, amo ed esca montati; sondare la traiettoria e correggere la profondità a piccoli incrementi.",
+      "diagram": {
+        "kind": "float",
+        "float_g": 1.5,
+        "terminal_cm": 80,
+        "weights": [
+          {
+            "height_cm": 140,
+            "mass_g": 0.5,
+            "kind": "pellet"
+          },
+          {
+            "height_cm": 110,
+            "mass_g": 0.3,
+            "kind": "pellet"
+          },
+          {
+            "height_cm": 80,
+            "mass_g": 0.2,
+            "kind": "pellet"
+          },
+          {
+            "height_cm": 55,
+            "mass_g": 0.15,
+            "kind": "pellet"
+          },
+          {
+            "height_cm": 30,
+            "mass_g": 0.1,
+            "kind": "pellet"
+          },
+          {
+            "height_cm": 10,
+            "mass_g": 0.05,
+            "kind": "pellet"
+          }
+        ]
+      }
     },
     {
       "id": "F",
@@ -83,7 +158,29 @@
         "Terminale 60 cm, diametro 0,16–0,20 mm; amo resistente con apertura indicativa 4–7 mm.",
         "Sopra la giunzione: torpille 2,20 g a 80 cm; gruppo 0,25 g a 45 cm; gruppo 0,15 g a 15 cm. Totale iniziale 2,60 g."
       ],
-      "adjustments": "Ridurre la pancia del filo, regolare profondità e distribuzione; tarare in acqua con tutto il complesso."
+      "adjustments": "Ridurre la pancia del filo, regolare profondità e distribuzione; tarare in acqua con tutto il complesso.",
+      "diagram": {
+        "kind": "float",
+        "float_g": 3,
+        "terminal_cm": 60,
+        "weights": [
+          {
+            "height_cm": 80,
+            "mass_g": 2.2,
+            "kind": "torpille"
+          },
+          {
+            "height_cm": 45,
+            "mass_g": 0.25,
+            "kind": "pellet"
+          },
+          {
+            "height_cm": 15,
+            "mass_g": 0.15,
+            "kind": "pellet"
+          }
+        ]
+      }
     }
   ]
 }

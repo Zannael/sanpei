@@ -393,7 +393,9 @@ async fn add_comparison(
         changed_inputs: changed,
         content_changed: old_package != bundle.package_id
             || old_result.content_version != bundle.content_version
-            || old_result.engine_version != result.engine_version,
+            || old_result.engine_version != result.engine_version
+            || old_content
+                != serde_json::to_value(bundle).map_err(|_| invalid("Pacchetto non valido."))?,
     });
     Ok(())
 }
@@ -585,6 +587,13 @@ mod tests {
                 .changed_inputs
                 .contains(&"condizioni".to_string()));
             assert!(!comparison.content_changed);
+            let mut altered = crate::content::builtin().unwrap();
+            altered.rigs["rigs"][0]["name"] = serde_json::json!("nome cambiato");
+            let mut compared = evaluate(&next, &altered).unwrap();
+            add_comparison(&pool, &next, &altered, &mut compared)
+                .await
+                .unwrap();
+            assert!(compared.comparison.unwrap().content_changed);
             let after: String = sqlx::query_scalar("SELECT result_json FROM plans WHERE id=1")
                 .fetch_one(&pool)
                 .await
