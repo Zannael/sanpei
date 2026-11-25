@@ -5,7 +5,7 @@
 - Repository pubblica creata; consultare Git per commit e stato di sincronizzazione.
 - Scheletro Tauri 2 / Svelte / TypeScript / Vite / SQLx / SQLite e lockfile presenti.
 - Mappa MapLibre offline con confini regionali ISTAT/Openpolis attribuiti, scelta della regione anche via elenco e rispetto del movimento ridotto. Non è ancora una base PMTiles dettagliata e non contiene settori o postazioni verificati.
-- Diario iniziale: creazione/elenco uscite, canne, intervalli, catture, esito incompleto/zero/catture. I vincoli SQL vietano intervalli sovrapposti sulla stessa canna. Mancano modifica e cancellazione, pause, posizioni strutturate, allegati, osservazioni e calcoli dello sforzo.
+- Diario iniziale: creazione/elenco uscite, canne, intervalli, catture, esito incompleto/zero/catture. I vincoli SQL vietano intervalli sovrapposti sulla stessa canna. Si possono registrare osservazioni datate. Mancano modifica e cancellazione, pause, posizioni strutturate, allegati e calcoli dello sforzo.
 - Sei schede sintetiche preliminari in `content/lazio-rigs.v1.json`. Non sono un pacchetto scientifico completo né validato, e non includono tutte le misure.
 - Richiesta esplicita a Open-Meteo per meteo/mare con coordinate e cache locale. Mancano normalizzazione completa, astronomia, test del provider, gestione di tutte le finestre e attribuzioni puntuali dei modelli.
 - Pianificatore spiegabile, importazione/versionamento contenuti ed esportazioni non implementati. Copia e ripristino SQLite sono disponibili; le finestre native non sono ancora state provate nella WebView. Non dichiarare nessuna fase T0–T5 completa.

@@ -27,11 +27,26 @@ pub struct Catch {
     pub weight_estimated: bool,
     pub disposition: String,
 }
+#[derive(Serialize, sqlx::FromRow)]
+pub struct Observation {
+    pub id: i64,
+    pub occurred_at: String,
+    pub kind: String,
+    pub notes: String,
+}
+#[derive(Deserialize)]
+pub struct NewObservation {
+    pub trip_id: i64,
+    pub occurred_at: String,
+    pub kind: String,
+    pub notes: String,
+}
 #[derive(Serialize)]
 pub struct Details {
     pub rods: Vec<Rod>,
     pub intervals: Vec<Interval>,
     pub catches: Vec<Catch>,
+    pub observations: Vec<Observation>,
 }
 #[derive(Deserialize)]
 pub struct NewInterval {
@@ -70,10 +85,18 @@ pub async fn trip_details(
         .map_err(AppError::database)?;
     let intervals=sqlx::query_as::<_,Interval>("SELECT i.id,i.rod_id,i.starts_at,i.ends_at,i.rig,i.bait FROM intervals i JOIN rods r ON r.id=i.rod_id WHERE r.trip_id=? ORDER BY i.starts_at").bind(trip_id).fetch_all(pool.inner()).await.map_err(AppError::database)?;
     let catches=sqlx::query_as::<_,Catch>("SELECT id,occurred_at,species,uncertain,length_cm,weight_g,weight_estimated,disposition FROM catches WHERE trip_id=? ORDER BY occurred_at").bind(trip_id).fetch_all(pool.inner()).await.map_err(AppError::database)?;
+    let observations = sqlx::query_as::<_, Observation>(
+        "SELECT id,occurred_at,kind,notes FROM observations WHERE trip_id=? ORDER BY occurred_at",
+    )
+    .bind(trip_id)
+    .fetch_all(pool.inner())
+    .await
+    .map_err(AppError::database)?;
     Ok(Details {
         rods,
         intervals,
         catches,
+        observations,
     })
 }
 #[tauri::command]
@@ -166,6 +189,25 @@ pub async fn set_outcome(
     sqlx::query("UPDATE trips SET outcome=? WHERE id=?")
         .bind(outcome)
         .bind(trip_id)
+        .execute(pool.inner())
+        .await
+        .map_err(AppError::database)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn add_observation(
+    pool: tauri::State<'_, SqlitePool>,
+    observation: NewObservation,
+) -> Result<(), AppError> {
+    if observation.kind.trim().is_empty() || observation.occurred_at.trim().is_empty() {
+        return Err(invalid("Inserisci tipo e ora dell'osservazione."));
+    }
+    sqlx::query("INSERT INTO observations (trip_id,occurred_at,kind,notes) VALUES (?,?,?,?)")
+        .bind(observation.trip_id)
+        .bind(observation.occurred_at)
+        .bind(observation.kind.trim())
+        .bind(observation.notes.trim())
         .execute(pool.inner())
         .await
         .map_err(AppError::database)?;

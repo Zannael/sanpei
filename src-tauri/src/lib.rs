@@ -88,6 +88,7 @@ pub fn run() {
             diary::add_rod,
             diary::add_interval,
             diary::add_catch,
+            diary::add_observation,
             diary::set_outcome,
             weather::fetch_forecast,
             weather::cached_forecast,

@@ -291,9 +291,14 @@ mod restore_tests {
             .execute(&db)
             .await
             .unwrap();
+            sqlx::query("INSERT INTO observations(trip_id,occurred_at,kind,notes) VALUES (1,'2026-01-01T01:00:00Z','mare','sintetico')").execute(&db).await.unwrap();
             let original = dir.join("backup.sqlite3");
             snapshot(&db, &original).await.unwrap();
             sqlx::query("UPDATE trips SET title='changed'")
+                .execute(&db)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM observations")
                 .execute(&db)
                 .await
                 .unwrap();
@@ -306,6 +311,13 @@ mod restore_tests {
                     .await
                     .unwrap(),
                 "original"
+            );
+            assert_eq!(
+                sqlx::query_scalar::<_, String>("SELECT notes FROM observations")
+                    .fetch_one(&db)
+                    .await
+                    .unwrap(),
+                "sintetico"
             );
             let invalid = dir.join("invalid.sqlite3");
             std::fs::write(&invalid, b"not sqlite").unwrap();
