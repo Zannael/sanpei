@@ -25,4 +25,4 @@ Verificare nell'app desktop la mappa locale, la creazione degli intervalli e la 
 
 ## Tentativo di backup
 
-Una prima implementazione `VACUUM INTO` non ha superato il test di lettura della copia e non è stata mantenuta o pubblicata. Riprodurre e risolvere il problema con test su un database SQLite su disco prima di esporre il backup; non dichiarare disponibile una copia non verificata.
+Una prima implementazione `VACUUM INTO` non ha superato il test di lettura e non è stata pubblicata. Una prova separata con database su disco e destinazione inesistente ha prodotto una copia leggibile; il caso della destinazione preesistente rimane da verificare. Implementare pubblicazione atomica senza sovrascrittura e testare ripristino prima di esporre la funzione.
