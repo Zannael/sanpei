@@ -71,11 +71,9 @@ async fn snapshot(pool: &SqlitePool, destination: &Path) -> Result<(), AppError>
             std::fs::set_permissions(&temporary, std::fs::Permissions::from_mode(0o600))
                 .map_err(|_| error("backup_failed", "Impossibile proteggere la copia."))?;
         }
-        std::fs::hard_link(&temporary, destination).map_err(|_| {
-            error(
-                "backup_file_error",
-                "Impossibile salvare: scegli un file che non esiste già.",
-            )
+        std::fs::hard_link(&temporary, destination).map_err(|e| {
+            if e.kind()==std::io::ErrorKind::AlreadyExists {error("backup_file_error", "Il file esiste già: scegli un altro nome.")}
+            else {error("backup_file_error", "Impossibile salvare nel percorso scelto; verifica permessi e supporto del file system.")}
         })?;
         Ok(())
     }

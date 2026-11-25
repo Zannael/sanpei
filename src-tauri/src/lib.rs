@@ -1,6 +1,7 @@
 mod backup;
 mod content;
 mod diary;
+mod export;
 mod planner;
 mod time;
 mod weather;
@@ -152,6 +153,7 @@ pub fn run() {
             content::import_package,
             content::list_packages,
             content::activate_package,
+            export::export_data,
             planner::save_plan,
             planner::list_plans,
             planner::create_trip_from_plan
