@@ -16,6 +16,8 @@ pub struct Scenario {
     pub start_at: String,
     pub end_at: String,
     pub target: String,
+    #[serde(default)]
+    pub forecast_snapshot: Option<serde_json::Value>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -115,6 +117,9 @@ fn evaluate(s: &Scenario) -> Result<Evaluation, AppError> {
             "sconosciuto",
         ]
         .contains(&s.condition.as_str())
+        || s.forecast_snapshot
+            .as_ref()
+            .is_some_and(|v| v.to_string().len() > 500_000 || !v.is_object())
         || s.casting_limit_g
             .is_some_and(|v| !v.is_finite() || v <= 0.0)
     {
@@ -203,6 +208,7 @@ mod tests {
             start_at: "2026-01-01T12:00:00Z".into(),
             end_at: "2026-01-01T14:00:00Z".into(),
             target: String::new(),
+            forecast_snapshot: None,
         }
     }
     #[test]
@@ -234,6 +240,9 @@ mod tests {
             let mut first = scenario();
             first.casting_limit_g = Some(150.0);
             first.fixed_rig = Some("C".into());
+            first.forecast_snapshot = Some(
+                serde_json::json!({"source":"test", "retrieved_at":"1", "weather":{"hourly":{"time":["synthetic"]}}}),
+            );
             persist(&pool, &first).await.unwrap();
             let prior: (String, String, String) =
                 sqlx::query_as("SELECT scenario_json,result_json,rules_json FROM plans WHERE id=1")
@@ -241,6 +250,7 @@ mod tests {
                     .await
                     .unwrap();
             first.fixed_rig = Some("D".into());
+            first.forecast_snapshot = None;
             persist(&pool, &first).await.unwrap();
             let after: (String, String, String) =
                 sqlx::query_as("SELECT scenario_json,result_json,rules_json FROM plans WHERE id=1")
@@ -248,6 +258,7 @@ mod tests {
                     .await
                     .unwrap();
             assert_eq!(prior, after);
+            assert!(prior.0.contains("synthetic"));
             assert!(prior.1.contains("\"C\""));
             assert!(prior.2.contains("\"rigs\""));
         });

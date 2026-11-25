@@ -1,0 +1,11 @@
+<script lang="ts">
+ export let snapshot:Record<string,unknown>;
+ type Dataset={latitude:number,longitude:number,hourly?:Record<string,(number|string|null)[]>,hourly_units?:Record<string,string>};
+ const labels:Record<string,string>={temperature_2m:'Temperatura',precipitation:'Precipitazione',wind_speed_10m:'Vento',wind_direction_10m:'Direzione vento',wind_gusts_10m:'Raffiche',wave_height:'Altezza significativa onde',wave_direction:'Direzione onde',wave_period:'Periodo onde',sea_surface_temperature:'Temperatura superficie mare'};
+ function dataset(v:unknown):Dataset|null{return v && typeof v==='object' ? v as Dataset : null}
+ $: sections=[{name:'Meteo',data:dataset(snapshot.weather)},{name:'Mare',data:dataset(snapshot.marine)}];
+ $: received=Number(snapshot.retrieved_at);
+</script>
+<p class="source">Fonte: {String(snapshot.source || 'Open-Meteo')}. Coordinate richieste: {String(snapshot.requested_latitude ?? 'non indicate')}, {String(snapshot.requested_longitude ?? 'non indicate')}. {#if Number.isFinite(received) && received>0}Recuperata il {new Intl.DateTimeFormat('it-IT',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Rome'}).format(new Date(received*1000))}.{/if} Orari nel fuso Europe/Rome.</p>
+{#each sections as section}<h3>{section.name}</h3>{#if Array.isArray(section.data?.hourly?.time) && section.data?.hourly_units}<p class="source">Cella modello: {section.data.latitude}, {section.data.longitude}. Orizzonte: {section.data.hourly.time[0]} – {section.data.hourly.time.at(-1)}.</p><div class="weather-table"><table><thead><tr><th>Ora</th>{#each Object.keys(section.data.hourly).filter(k=>k!=='time') as key}<th>{labels[key] || key} ({section.data.hourly_units[key]})</th>{/each}</tr></thead><tbody>{#each section.data.hourly.time as time,index}<tr><td>{time}</td>{#each Object.keys(section.data.hourly).filter(k=>k!=='time') as key}<td>{section.data.hourly[key]?.[index] ?? '—'}</td>{/each}</tr>{/each}</tbody></table></div>{:else}<p class="source">Dati non disponibili per questa risposta.</p>{/if}{/each}
+<p class="source">La risposta può essere superata o non coprire la finestra scelta. Modelli e attribuzioni: <a href="https://open-meteo.com/en/docs">meteo</a> e <a href="https://open-meteo.com/en/docs/marine-weather-api">mare</a>.</p>
