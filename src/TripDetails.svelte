@@ -1,11 +1,12 @@
 <script lang="ts">
  import {invoke} from '@tauri-apps/api/core';
  export let tripId:number;
+ export let initialOutcome:string;
  export let onChanged:()=>void;
  type Rod={id:number,name:string}; type Interval={id:number,rod_id:number,starts_at:string,ends_at:string,rig:string,bait:string}; type Catch={id:number,occurred_at:string,species:string,uncertain:boolean,length_cm:number|null,weight_g:number|null,weight_estimated:boolean,disposition:string}; type Details={rods:Rod[],intervals:Interval[],catches:Catch[]};
  let data:Details={rods:[],intervals:[],catches:[]}; let error=''; let rodName=''; let rodId=0; let start='',end='',rig='',bait=''; let species='',caughtAt='',length='',weight='',uncertain=false,weightEstimated=false,disposition='unknown'; let outcome='incomplete';
  let loadedId=0;
- $: if(tripId!==loadedId){loadedId=tripId;load()}
+ $: if(tripId!==loadedId){loadedId=tripId;outcome=initialOutcome;load()}
  async function load(){try{data=await invoke('trip_details',{tripId}); error=''; if(!data.rods.some(x=>x.id===rodId))rodId=data.rods[0]?.id || 0;}catch{error='Impossibile caricare i dettagli.'}}
  async function action(command:string,args:Record<string,unknown>){try{await invoke(command,args); await load();onChanged();}catch(e){error=typeof e==='object'&&e!==null&&'message' in e?String(e.message):'Impossibile salvare i dati.';}}
  function utc(s:string){return new Date(s).toISOString().replace('.000Z','Z')}

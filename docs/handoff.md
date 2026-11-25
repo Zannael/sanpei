@@ -13,7 +13,8 @@
 ## Verifiche e limiti
 
 - Build frontend, Rust check, test e privacy eseguiti nel corso dello sviluppo; ripetere dopo ogni modifica. Il test attuale verifica sovrapposizioni e simultaneità delle canne.
-- La prima versione del processo Tauri è stata avviata; la finestra, la nuova mappa e il diario non sono ancora stati verificati visivamente nella WebView. Persistenza dopo riavvio e build Debian non ancora verificate.
+- La prima versione del processo Tauri è stata avviata. La mappa e la navigazione sono state verificate visivamente nel browser, non ancora nella WebView Tauri; il diario e la persistenza dopo riavvio non sono stati verificati nell’app desktop.
+- `pnpm tauri build --bundles deb` ha creato il pacchetto Debian; installazione pulita e funzionamento del pacchetto non sono stati provati.
 - La ricerca originale resta esterna al repository; fonti primarie, licenze e coordinate delle postazioni non sono state ancora riverificate. Anomalia Pomezia A002 sospesa.
 - Nessun backup/ripristino operativo: non usare l'app per dati insostituibili senza copie esterne.
 - I controlli privacy automatici richiedono sempre una revisione manuale; non inserire dati personali o PDF nel repository.
