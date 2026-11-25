@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "content_version": "0.1.0",
+  "content_version": "0.2.0",
   "status": "draft",
   "source": "Ricerca critica Lazio, 24 novembre 2026, sezioni 10–14",
   "rigs": [
@@ -9,42 +9,81 @@
       "name": "Bracciolo basso",
       "use": "Fondo leggero su sabbia",
       "detail": "Trave 100 cm; snodo a 15 cm dal piombo; bracciolo 120 cm. Piombo iniziale 60 g.",
-      "caution": "Se si aggroviglia, prova un bracciolo più corto. La massa totale deve essere compatibile con tutta l’attrezzatura."
+      "caution": "Se si aggroviglia, prova un bracciolo più corto. La massa totale deve essere compatibile con tutta l’attrezzatura.",
+      "components": [
+        "Madre nylon 0,23–0,26 mm; shock leader adeguato al peso totale, con riferimento operativo di circa 18 kg nominali per 90 g.",
+        "Trave 100 cm, nominalmente 0,50–0,60 mm secondo prodotto; snodo a 15 cm dall’attacco del piombo.",
+        "Bracciolo 120 cm, nylon 0,20–0,22 mm; amo con apertura indicativa 4–6 mm.",
+        "Piombo iniziale 60 g; intervallo operativo 40–80 g solo se il sistema lo consente."
+      ],
+      "adjustments": "Per grovigli, prova bracciolo di 80 cm e/o diametro 0,23–0,25 mm. Se il piombo deriva, valuta prima forma e filo esposto."
     },
     {
       "id": "B",
       "name": "Piombo scorrevole",
       "use": "Boccone più consistente",
       "detail": "Terminale 150 cm; piombo iniziale 80–120 g. Passafilo con perla morbida e girella.",
-      "caution": "Verifica che la lenza scorra: il piombo non deve rimanere imprigionato."
+      "caution": "Verifica che la lenza scorra: il piombo non deve rimanere imprigionato.",
+      "components": [
+        "Sequenza: madre, shock leader, passafilo con piombo, perla morbida, girella, terminale e amo.",
+        "Madre 0,25–0,28 mm; shock adeguato alla massa totale di riferimento 90–140 g.",
+        "Piombo iniziale 80–120 g; terminale 150 cm e diametro 0,26–0,30 mm.",
+        "Amo robusto con apertura indicativa 7–10 mm, proporzionato al boccone."
+      ],
+      "adjustments": "Per rotazioni, prova un terminale di 100 cm; controlla abrasione e scorrimento."
     },
     {
       "id": "C",
       "name": "Due braccioli corti",
       "use": "Moto ondoso lavorabile",
       "detail": "Trave 180 cm; snodi a 40 e 120 cm dal piombo; braccioli di 30 e 35 cm. Piombo iniziale 125 g.",
-      "caution": "Le misure limitano le interferenze geometriche, ma non eliminano tutti i grovigli."
+      "caution": "Le misure limitano le interferenze geometriche, ma non eliminano tutti i grovigli.",
+      "components": [
+        "Madre 0,28–0,33 mm; shock e trave adeguati al carico; riferimento operativo shock circa 30 kg nominali per 160 g totali.",
+        "Trave 180 cm; snodo basso a 40 cm dal piombo con bracciolo da 30 cm; snodo alto a 120 cm con bracciolo da 35 cm.",
+        "Braccioli 0,28–0,33 mm; ami con apertura indicativa 5–8 mm.",
+        "Piombo iniziale 125 g, fino a 150 g solo quando necessario e compatibile con tutto il sistema."
+      ],
+      "adjustments": "Con alghe o corrente prova un solo bracciolo; cambia settore se non riesci a mantenere l’esca pescante."
     },
     {
       "id": "D",
       "name": "Bracciolo alto",
       "use": "Un solo boccone resistente",
       "detail": "Trave 150 cm; snodo a 120 cm dal piombo; bracciolo 100 cm. Piombo iniziale 125 g.",
-      "caution": "Un eventuale bait clip va regolato e provato; l’esca non rimane necessariamente sollevata."
+      "caution": "Un eventuale bait clip va regolato e provato; l’esca non rimane necessariamente sollevata.",
+      "components": [
+        "Sistema portante proporzionato come nella montatura C.",
+        "Trave 150 cm, snodo a 120 cm dal piombo, bracciolo 100 cm di nylon 0,30–0,35 mm.",
+        "Piombo iniziale 125 g; amo robusto con apertura indicativa 8–12 mm."
+      ],
+      "adjustments": "Se necessario riduci il bracciolo a 70–80 cm e regola nuovamente l’eventuale bait clip."
     },
     {
       "id": "E",
       "name": "Spallinata aperta",
       "use": "Bolognese in acqua tranquilla",
       "detail": "Galleggiante 1,5 g; terminale 80 cm. Sei gruppi di pallini per 1,30 g iniziali.",
-      "caution": "La taratura richiede una prova in acqua con tutti i componenti."
+      "caution": "La taratura richiede una prova in acqua con tutti i componenti.",
+      "components": [
+        "Canna indicativa 6–7 m, madre nylon 0,16–0,18 mm, galleggiante fisso non prepiombato da 1,5 g.",
+        "Terminale 80 cm, diametro 0,14–0,16 mm; amo di apertura indicativa 2,5–4 mm per piccoli inneschi.",
+        "Gruppi di pallini sopra la giunzione: 0,50 g a 140 cm; 0,30 g a 110 cm; 0,20 g a 80 cm; 0,15 g a 55 cm; 0,10 g a 30 cm; 0,05 g a 10 cm. Totale iniziale 1,30 g."
+      ],
+      "adjustments": "Tarare in acqua con girella, amo ed esca montati; sondare la traiettoria e correggere la profondità a piccoli incrementi."
     },
     {
       "id": "F",
       "name": "Peso concentrato",
       "use": "Bolognese con corrente moderata",
       "detail": "Galleggiante 3 g; terminale 60 cm. Torpille e pallini per 2,60 g iniziali.",
-      "caution": "Controlla profondità, traiettoria e tenuta della postazione prima di modificare la piombatura."
+      "caution": "Controlla profondità, traiettoria e tenuta della postazione prima di modificare la piombatura.",
+      "components": [
+        "Canna indicativa 6–7 m, madre 0,18–0,20 mm e galleggiante fisso non prepiombato da 3 g.",
+        "Terminale 60 cm, diametro 0,16–0,20 mm; amo resistente con apertura indicativa 4–7 mm.",
+        "Sopra la giunzione: torpille 2,20 g a 80 cm; gruppo 0,25 g a 45 cm; gruppo 0,15 g a 15 cm. Totale iniziale 2,60 g."
+      ],
+      "adjustments": "Ridurre la pancia del filo, regolare profondità e distribuzione; tarare in acqua con tutto il complesso."
     }
   ]
 }
