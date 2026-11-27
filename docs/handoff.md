@@ -19,13 +19,13 @@
 - Copia e ripristino SQLite sono verificati da test su disco; le finestre native e il flusso end-to-end restano da provare.
 - I controlli privacy automatici richiedono sempre una revisione manuale; non inserire dati personali o PDF nel repository.
 
-## Prossimo compito
+## Prosecuzione
 
-Verificare nell'app desktop la mappa locale, la creazione degli intervalli e la persistenza dopo riavvio usando dati sintetici. Completare il diario e la conservazione sicura prima della release; quindi implementare pacchetti scientifici validati e motore spiegabile secondo `implementation-plan.md` e `architecture.md`.
+Il lavoro è definito esclusivamente in [roadmap/TODO.md](../roadmap/TODO.md). Eseguire `python3 scripts/check_roadmap.py` e `--ready`, poi seguire l'ordine delle attività pronte secondo AGENTS.md. La priorità aggiornata è il percorso automatico mappa → servizi → confronto giorni/zone → proposta → piano, prima del completamento di diario e release. Questo documento è un riepilogo descrittivo, non una coda alternativa.
 
 ## Copia del database
 
-La copia usa `VACUUM INTO` in una directory temporanea privata, controlla l'integrità e pubblica il file tramite hard link senza sovrascrivere. Test su database su disco coprono lettura e destinazione esistente. File system senza supporto agli hard link restituiscono errore. Il ripristino è ancora da progettare e verificare; non è presente nell'interfaccia.
+La copia usa `VACUUM INTO` in una directory temporanea privata, controlla l'integrità e pubblica il file tramite hard link senza sovrascrivere. Test su database su disco coprono lettura e destinazione esistente. File system senza supporto agli hard link restituiscono errore. Il ripristino SQLite è presente nel prototipo e nei test storici, con controllo di integrità/schema su copia e copia di recupero precedente. Non include ancora allegati e non è stato ricollaudato nella WebView in questa attività.
 
 ## Orari e piani
 
@@ -40,3 +40,7 @@ Il formato e i limiti sono descritti in `docs/research-packages.md`. I test veri
 Il JSON contiene tabelle del diario, piani, snapshot delle regole, pacchetti e cache; campi booleani SQLite sono espressi come 0/1. I CSV sono separati per uscite, intervalli e catture, con campi mancanti vuoti e protezione delle formule. Il GeoJSON contiene posizioni personali: la destinazione va scelta consapevolmente. Salvataggio su file nuovo, con pubblicazione atomica tramite hard link.
 
 I parametri aggiuntivi senza valore fanno saltare le sole regole che li richiedono e generano un avviso. Gli operatori e i tipi sono limitati e validati; nuovi operatori richiedono codice. Le versioni precedenti dei piani restano immutabili.
+
+## Aggiornamento roadmap del 27 novembre 2026
+
+Creati backlog unico, registro dei fatti/decisioni, grafo generato e validatore Python 3.10+ stdlib con test. Hook e CI controllano la coerenza della roadmap; il pre-push privacy rimane attivo. È una modifica del workflow, non delle funzionalità dell'app: nessuna connessione aggiuntiva o raccomandazione automatica è stata implementata in questa attività. Le prove del workflow sono registrate nell'attività di governance e nel master; le funzionalità parziali del prototipo non sono dichiarate completate retroattivamente.

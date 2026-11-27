@@ -1,0 +1,560 @@
+{
+  "retired": [],
+  "schema_version": 1,
+  "tasks": [
+    {
+      "completion": "Validatore e test stdlib passano; grafo riproducibile; ready e layers corretti; tutti i requisiti T0–T5 coperti; nessun secondo backlog operativo.",
+      "dependencies": [],
+      "id": "GOV-001",
+      "note": null,
+      "owner": "Codex",
+      "responsible": "Agent",
+      "scope": "Implementare questo sistema secondo l'esempio adattato; collegare istruzioni, hook esistenti e CI preservando i controlli privacy; distinguere requisiti, fatti e lavoro.",
+      "status": "Done",
+      "title": "Attivare backlog unico, validatore, grafo e workflow.",
+      "verification": "2026-11-27 UTC python3 scripts/check_roadmap.py --write-graph; python3 scripts/check_roadmap.py; python3 scripts/check_roadmap.py --ready; python3 scripts/check_roadmap.py --layers; python3 -m unittest discover -s tests -v: 14 test passati, inclusi CLI/idempotenza/mutazioni; sh scripts/hooks/pre-commit e pnpm privacy passati; revisione manuale della copertura T0–T5. Solo workflow locale verificato, non integrazioni live o app desktop; CI configurata, esecuzione remota non attestata."
+    },
+    {
+      "completion": "Prove dell'app Tauri reale e della persistenza disponibili; eventuali difetti bloccanti risolti o suddivisi in attività prima di procedere; prova browser separata.",
+      "dependencies": [
+        "GOV-001"
+      ],
+      "id": "CORE-001",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T0; provare checkout attuale con dati sintetici, migrazioni, mappa regionale, riavvio e dato riletto; registrare ambiente generico e limiti senza percorsi personali.",
+      "status": "Not started",
+      "title": "Riprodurre avvio e persistenza nella WebView Linux.",
+      "verification": null
+    },
+    {
+      "completion": "Test di regole e determinismo eseguibili senza desktop o database; integrazione esistente non regressa; confini documentati.",
+      "dependencies": [
+        "CORE-001"
+      ],
+      "id": "CORE-002",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Architettura §§1,3; estrarre il nucleo esistente in modulo o crate senza Tauri, SQLx e rete, mantenendo API e snapshot compatibili.",
+      "status": "Not started",
+      "title": "Separare valutazione pura da comandi e persistenza.",
+      "verification": null
+    },
+    {
+      "completion": "Generazione riproducibile e controllo CI dei tipi obsoleti; build frontend e Rust passano; vecchi piani leggibili; frontend senza tipi duplicati dei contratti migrati.",
+      "dependencies": [
+        "CORE-002"
+      ],
+      "id": "CORE-003",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Architettura §1 e specifica T0; contratti versionati di geometrie, condizioni, valutazioni ed errori; comandi applicativi e capabilities ristrette, senza filesystem o SQL generico.",
+      "status": "Not started",
+      "title": "Generare i contratti frontend dai tipi Rust.",
+      "verification": null
+    },
+    {
+      "completion": "Matrice dei servizi con decisione motivata, configurazione necessaria e fallback; eventuale impedimento al satellite dichiarato; nessun orizzonte o diritto assunto senza fonte.",
+      "dependencies": [
+        "CORE-001"
+      ],
+      "id": "SRC-001",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T1/T3; consultare fonti primarie Open-Meteo meteo/mare, base cartografica e immagini satellitari; registrare URL, termini, licenze, attribuzioni, limiti di accesso/cache e data; nessun abbonamento o segreto pubblico.",
+      "status": "Not started",
+      "title": "Verificare fonti e accesso ai servizi ambientali e cartografici.",
+      "verification": null
+    },
+    {
+      "completion": "Schema validato con fixture valide e invalide; importazione atomica; versioni precedenti ancora leggibili; coordinate A002 sospese; riferimenti stabili e nessun punto inventato.",
+      "dependencies": [
+        "CORE-003"
+      ],
+      "id": "GEO-001",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T1 e architettura §2; regione, settore, località, punto/tratto, geometria e punto di richiesta ambientale distinti; fonti, revisione, accuratezza e stato verificato/candidato/centro rappresentativo/sospeso.",
+      "status": "Not started",
+      "title": "Versionare il contratto geografico dei pacchetti.",
+      "verification": null
+    },
+    {
+      "completion": "Geometrie revisionate e riproducibili importabili; ogni elemento ha provenienza e precisione dichiarata; nessuna promessa di accessibilità o postazione ottimale.",
+      "dependencies": [
+        "GEO-001",
+        "SRC-001"
+      ],
+      "id": "GEO-002",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T1; Santa Marinella, Santa Severa, Ladispoli e Palo/Marina di San Nicola; verificare nomi, estensioni e geometrie con fonti e diritti, distinguendo centri rappresentativi e postazioni.",
+      "status": "Not started",
+      "title": "Verificare cartograficamente i settori settentrionali della ricerca.",
+      "verification": null
+    },
+    {
+      "completion": "Catalogo geografico iniziale completo rispetto ai settori esistenti, fonti e limiti visibili; eventuali elementi irrisolti marcati sospesi e non usati nelle proposte operative.",
+      "dependencies": [
+        "GEO-001",
+        "SRC-001"
+      ],
+      "id": "GEO-003",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T1; settori del catalogo fra litorale romano meridionale e Anzio; verificare geometrie e ambito della ricerca; anomalia Pomezia A002 esclusa finché irrisolta, esclusioni editoriali distinte dai divieti.",
+      "status": "Not started",
+      "title": "Verificare cartograficamente i settori meridionali della ricerca.",
+      "verification": null
+    },
+    {
+      "completion": "Costa e riferimenti locali leggibili nella WebView Linux; richieste di file non autorizzati respinte; senza rete nessuna schermata vuota e base offline attribuita; dimensioni asset documentate.",
+      "dependencies": [
+        "SRC-001",
+        "CORE-003"
+      ],
+      "id": "MAP-001",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T0/T1; integrare base autorizzata MapLibre, stile e attribuzioni; archivio PMTiles locale attraverso adattatore limitato ai file autorizzati; risorse locali dove necessarie.",
+      "status": "Not started",
+      "title": "Mostrare una base costiera dettagliata con fallback offline.",
+      "verification": null
+    },
+    {
+      "completion": "Ogni settore pubblicato si trova dalla mappa e dalla scheda, con evidenziazione coerente; Lazio iniziale, altre regioni indisponibili; nessun marker scambiabile per postazione verificata.",
+      "dependencies": [
+        "MAP-001",
+        "GEO-002",
+        "GEO-003"
+      ],
+      "id": "MAP-002",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T1; overlay di settori/tratti e marker con etichette di precisione; selezione bidirezionale scheda-mappa, zoom e breadcrumb Italia/regione/settore/località; tastiera e movimento ridotto.",
+      "status": "Not started",
+      "title": "Collegare zone, schede e selezione sulla mappa.",
+      "verification": null
+    },
+    {
+      "completion": "Immagini visibili nella WebView con attribuzione e comportamento offline esplicito; nessun download/cache oltre i diritti; indisponibilità del livello non blocca zone o pianificatore.",
+      "dependencies": [
+        "MAP-002",
+        "SRC-001"
+      ],
+      "id": "MAP-003",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T1 e richiesta utente; integrare la fonte scelta, commutazione base/immagini e overlay leggibili; fonte, data disponibile e attribuzioni; credenziali eventualmente locali.",
+      "status": "Not started",
+      "title": "Aggiungere il livello satellitare o ortofoto autorizzato.",
+      "verification": null
+    },
+    {
+      "completion": "Test di conversioni e direzioni, null e zero distinti, campi mancanti conservati; vecchia cache e snapshot trattati senza reinterpretazioni silenziose; nessun uso decisionale di JSON grezzo.",
+      "dependencies": [
+        "CORE-003",
+        "SRC-001"
+      ],
+      "id": "ENV-001",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T3; variabili con unità e convenzioni direzionali, coordinate richieste/restituite, provider/modello disponibile, validità UTC, recupero, emissione se disponibile e orizzonti per variabile; distinguere previsione/osservazione/simulazione.",
+      "status": "Not started",
+      "title": "Definire e testare il contratto ambientale normalizzato.",
+      "verification": null
+    },
+    {
+      "completion": "Test con risposte simulate per successo, timeout, errore HTTP, null e timestamp non validi; nessun inserimento manuale di vento o pioggia necessario per dati disponibili.",
+      "dependencies": [
+        "ENV-001"
+      ],
+      "id": "ENV-002",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T3; isolare HTTP dal dominio, richieste per coordinate catalogate e intervallo disponibile, timeout, stato HTTP, risposta parziale e normalizzazione; usare client sostituibile nei test.",
+      "status": "Not started",
+      "title": "Completare l'adattatore automatico Open-Meteo meteo.",
+      "verification": null
+    },
+    {
+      "completion": "Test per risposta completa, mare assente, copertura temporale diversa dal meteo e cella non utilizzabile; mancanze non trasformate in mare calmo o condizioni lavorabili.",
+      "dependencies": [
+        "ENV-001"
+      ],
+      "id": "ENV-003",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T3; onde, periodo, direzione e altre variabili realmente disponibili; verificare celle marine rispetto alla costa e conservare coordinate restituite e limiti; correnti non dedotte dal solo vento.",
+      "status": "Not started",
+      "title": "Completare l'adattatore automatico Open-Meteo mare.",
+      "verification": null
+    },
+    {
+      "completion": "Test su più zone con un provider indisponibile; offline usa cache datata senza presentarla come attuale; nessuna perdita delle serie valide in aggiornamenti parziali; nessuna posizione personale trasmessa implicitamente.",
+      "dependencies": [
+        "ENV-002",
+        "ENV-003",
+        "GEO-002",
+        "GEO-003"
+      ],
+      "id": "ENV-004",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T3; un'azione di pianificazione recupera meteo/mare per le zone ammesse senza coordinate digitate; richieste limitate e cancellabili, riuso cache, date visibili e consenso persistente alle connessioni configurabile.",
+      "status": "Not started",
+      "title": "Coordinare recupero per più zone, cache e aggiornamento.",
+      "verification": null
+    },
+    {
+      "completion": "Casi di riferimento indipendenti e cambio dell'ora verificati; risultati offline; fase lunare non trasformata in probabilità o beneficio di cattura.",
+      "dependencies": [
+        "ENV-001"
+      ],
+      "id": "ENV-005",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T3; selezionare libreria e verificarne fonte/licenza, alba/tramonto e fase lunare con validità e precisione dichiarate; UTC e presentazione Europe/Rome.",
+      "status": "Not started",
+      "title": "Calcolare sole e fase lunare localmente.",
+      "verification": null
+    },
+    {
+      "completion": "Checklist A–F revisionata, origini delle quote e somme E/F corrette; nessuna configurazione dichiarata ottima o sicurezza certificata dal solo diametro.",
+      "dependencies": [
+        "CORE-002"
+      ],
+      "id": "SCI-001",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T1 e tabella del catalogo; verificare sintesi, varianti, diametri, ami, quote A–F e schemi originali; associare localizzazione della fonte, etichetta di evidenza e diritti della rielaborazione.",
+      "status": "Not started",
+      "title": "Revisionare catalogo e misure delle sei montature.",
+      "verification": null
+    },
+    {
+      "completion": "Ogni regola operativa ha fonte e dominio validato; parametri mancanti o relazioni non dimostrabili producono verifica necessaria; la mappatura automatica non fabbrica categorie calmo/lavorabile.",
+      "dependencies": [
+        "SCI-001",
+        "ENV-001"
+      ],
+      "id": "SCI-002",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T1/T4; trascrivere relazioni documentate fra habitat, stagione/fascia oraria, specie quando supportata, tecnica e condizioni; separare evidenze, suggerimenti, limiti e politiche editoriali; nessuna soglia numerica inventata.",
+      "status": "Not started",
+      "title": "Collegare parametri ambientali a regole documentate.",
+      "verification": null
+    },
+    {
+      "completion": "Test di pacchetto invalido senza importazione parziale, nuovo parametro senza colonna, capacità sconosciuta respinta, nuova ricerca attiva senza modificare gli storici.",
+      "dependencies": [
+        "SCI-002",
+        "GEO-001"
+      ],
+      "id": "SCI-003",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T1, architettura §§2–5; validazione transazionale e anteprima differenze, tipi e unità, operatori supportati e capacità; pacchetti regionali espliciti senza sblocco automatico.",
+      "status": "Not started",
+      "title": "Completare anteprima e compatibilità degli aggiornamenti di ricerca.",
+      "verification": null
+    },
+    {
+      "completion": "Ogni avviso pubblicato ha fonte, data e ambito; validità sconosciuta esplicita; nessuna promessa di monitoraggio in tempo reale o certificazione del pescato.",
+      "dependencies": [
+        "SCI-001",
+        "GEO-003"
+      ],
+      "id": "SCI-004",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica attendibilità/T1; verificare fonti primarie dei riferimenti pubblicati, distinguere monitoraggi balneari, stato ambientale, accesso, liceità e idoneità alimentare; automatizzare soltanto fonti con servizio e diritti effettivi documentati.",
+      "status": "Not started",
+      "title": "Presentare riferimenti ambientali e normativi con validità verificata.",
+      "verification": null
+    },
+    {
+      "completion": "Dopo riavvio il pianificatore riusa i dati senza reinserimento; preferenze modificabili e scelte bloccabili; assenza di inventario non autorizza compatibilità positiva.",
+      "dependencies": [
+        "CORE-003"
+      ],
+      "id": "PLAN-001",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T4; configurazione locale di canne, componenti/esche disponibili, limiti dichiarati, zone/raggio, disponibilità di giorni e orari e obiettivi; nessuna stima stradale o account obbligatorio.",
+      "status": "Not started",
+      "title": "Salvare inventario e preferenze riutilizzabili.",
+      "verification": null
+    },
+    {
+      "completion": "Test deterministici multi-giorno/multi-zona con copertura parziale, cambio ora e data oltre previsione; nessuna previsione inventata; simulazione e osservazione sono percorsi facoltativi distinti.",
+      "dependencies": [
+        "ENV-004",
+        "ENV-005",
+        "SCI-002",
+        "PLAN-001"
+      ],
+      "id": "PLAN-002",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T4; unire disponibilità personali, aree ammesse, condizioni normalizzate e finestre documentate; dati automatici per ogni candidato, orizzonti reali per variabile, informazioni assenti esplicite.",
+      "status": "Not started",
+      "title": "Generare finestre candidate per giorni e zone disponibili.",
+      "verification": null
+    },
+    {
+      "completion": "Test di scelte bloccate, incompatibilità, dati mancanti e parità stabili; niente percentuali di cattura; assenza di candidati spiegata; sole previsioni insufficienti non diventano raccomandazione certa.",
+      "dependencies": [
+        "PLAN-002"
+      ],
+      "id": "PLAN-003",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T4 e architettura §3; valutazione Rust di luogo/finestra/tecnica/montatura/esca e distanza solo se documentata; peso totale lanciato e componenti; ordinamento per vincoli, preferenze e regole versionate.",
+      "status": "Not started",
+      "title": "Valutare e ordinare proposte spiegabili con vincoli reali.",
+      "verification": null
+    },
+    {
+      "completion": "Nella WebView un utente con configurazione salvata ottiene proposte senza digitare coordinate o condizioni; errori e cancellazione comprensibili; risultati mostrano copertura, freschezza e controlli all'arrivo.",
+      "dependencies": [
+        "PLAN-003",
+        "MAP-002",
+        "MAP-003"
+      ],
+      "id": "PLAN-004",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T4 e richiesta utente; azione confronta prossime disponibilità, recupero servizi senza trascrizione manuale, selezione coerente mappa/risultati; giorno, fascia, zona, tecnica, montatura, esca, motivi e alternative.",
+      "status": "Not started",
+      "title": "Costruire il flusso guidato di proposta automatica sulla mappa.",
+      "verification": null
+    },
+    {
+      "completion": "Nuovo meteo o nuova ricerca non cambiano il piano salvato; vecchio snapshot leggibile offline; percorso proposta → piano → uscita mantiene zona e motivazioni originarie.",
+      "dependencies": [
+        "PLAN-004",
+        "SCI-003"
+      ],
+      "id": "PLAN-005",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T4; conservare candidati valutati, risultato, geometrie, parametri, provenienza/provider, condizioni e versioni; compatibilità con piani esistenti e creazione uscita collegata.",
+      "status": "Not started",
+      "title": "Salvare e riaprire snapshot completi delle proposte automatiche.",
+      "verification": null
+    },
+    {
+      "completion": "Checklist riproducibile nella WebView e prova live dei servizi documentate separatamente dai provider simulati; senza rete cache datata o indisponibilità esplicita; nessuna dichiarazione di release completa.",
+      "dependencies": [
+        "PLAN-005"
+      ],
+      "id": "ACCEPT-001",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Verifica verticale T0/T1/T3/T4; avvio reale, preferenze salvate, zone e satellite, recupero servizi, confronto giorni, proposta e salvataggio/riavvio; fixture sintetiche per test e nessun dato personale in prove pubbliche.",
+      "status": "Not started",
+      "title": "Dimostrare la prima versione utile di pianificazione su Linux.",
+      "verification": null
+    },
+    {
+      "completion": "Test SQL di sovrapposizione rifiutata e due canne ammesse, rollback del cambio invalido e persistenza dopo riavvio; nessuna cancellazione necessaria per correggere un record.",
+      "dependencies": [
+        "ACCEPT-001"
+      ],
+      "id": "DIARY-001",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T2; modifica di canne/intervalli/catture/osservazioni, cambio assetto chiude e apre intervalli in transazione, pause e contemporaneità conservate.",
+      "status": "Not started",
+      "title": "Completare modifiche e cambio atomico di assetto.",
+      "verification": null
+    },
+    {
+      "completion": "Test su assenza/zero/stima; un nuovo parametro non richiede una colonna né rende incompleti vecchi record; definizioni storiche leggibili e dati locali.",
+      "dependencies": [
+        "DIARY-001",
+        "SCI-003"
+      ],
+      "id": "DIARY-002",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T2; numero ami, identificazione incerta, lunghezza/peso stimati o misurati, rilascio/trattenimento, partecipanti facoltativi e valori aggiuntivi con definizioni versionate.",
+      "status": "Not started",
+      "title": "Completare misure, partecipanti e parametri aggiuntivi del diario.",
+      "verification": null
+    },
+    {
+      "completion": "Test di importazione/rimozione, file mancante o non valido, eliminazione uscita e coerenza database/file anche su errore; riavvio conserva una fotografia sintetica.",
+      "dependencies": [
+        "DIARY-001"
+      ],
+      "id": "DIARY-003",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T2; importazione controllata nella directory applicativa, metadata e riferimenti stabili, limiti e anteprime; mai percorsi arbitrari dal frontend o file reali nel repository.",
+      "status": "Not started",
+      "title": "Gestire fotografie e ciclo di vita degli allegati locali.",
+      "verification": null
+    },
+    {
+      "completion": "Test doppia canna, pausa, cambio ora e dettagli mancanti; nessuna equivalenza tra assenza catture registrate e cappotto, né inferenza causale dalle statistiche.",
+      "dependencies": [
+        "DIARY-002"
+      ],
+      "id": "DIARY-004",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T2 e verifiche trasversali; ore-canna nominali/efficaci, pause, catture/cappotto/registrazione incompleta distinti; indicatori descrittivi solo con denominatori e misure sufficienti.",
+      "status": "Not started",
+      "title": "Completare sforzo, esiti e riepiloghi descrittivi.",
+      "verification": null
+    },
+    {
+      "completion": "Test di correzioni e dati ignoti; confronto motivato con originale immutato; osservazioni non trasformate in previsioni né cause certe di cattura.",
+      "dependencies": [
+        "ACCEPT-001",
+        "DIARY-002"
+      ],
+      "id": "PLAN-006",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T4; osservazioni su esca, grovigli, deriva, sottotaglia e passata; trasformazione esplicita in input supportati, nuova valutazione collegata e consiglio seguito annotabile.",
+      "status": "Not started",
+      "title": "Rivalutare sul posto con diagnosi motivate e confronto storico.",
+      "verification": null
+    },
+    {
+      "completion": "Test su dati sintetici completi, null distinti da zero, coordinate e definizioni ricostruibili, testo CSV sicuro e destinazione esistente non sovrascritta.",
+      "dependencies": [
+        "DIARY-003",
+        "DIARY-004",
+        "PLAN-006"
+      ],
+      "id": "DATA-001",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T5; completare JSON, CSV e GeoJSON con nuovi campi, riferimenti agli allegati, definizioni/versioni e storici; documentare contenuto di ogni formato e protezione delle formule.",
+      "status": "Not started",
+      "title": "Versionare esportazioni complete con definizioni e allegati.",
+      "verification": null
+    },
+    {
+      "completion": "Test con scrittura concorrente, file mancante e backup interrotto; archivio verifica checksum e riferimenti; database corrente e vecchi backup invariati su errore.",
+      "dependencies": [
+        "DATA-001"
+      ],
+      "id": "DATA-002",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T5; estendere snapshot VACUUM INTO a contenitore versionato con manifest, checksum, allegati e pacchetti; bloccare mutazioni durante preparazione, pubblicazione atomica e non sovrascrivente.",
+      "status": "Not started",
+      "title": "Creare backup coerente con allegati e checksum.",
+      "verification": null
+    },
+    {
+      "completion": "Test di file corrotto, checksum errato, versione futura, allegato assente e percorso malevolo; errori lasciano dati correnti intatti; successo ricostruisce piani e foto.",
+      "dependencies": [
+        "DATA-002"
+      ],
+      "id": "DATA-003",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T5; area temporanea, limiti di estrazione, controllo percorsi, integrità/riferimenti/schema, sostituzione controllata e copia precedente; mantenere lettura dei backup SQLite supportati.",
+      "status": "Not started",
+      "title": "Ripristinare il backup completo senza perdita dei dati correnti.",
+      "verification": null
+    },
+    {
+      "completion": "Prove riproducibili con diario/foto/pacchetti/piani conservati e versioni incompatibili respinte; nessuna dipendenza dai cataloghi correnti per leggere uno storico.",
+      "dependencies": [
+        "DATA-003"
+      ],
+      "id": "DATA-004",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T5 e architettura §6; migrare database precedente, aggiornare ricerca con nuovo parametro, consultare storico e ripristinare tutto in directory applicativa pulita.",
+      "status": "Not started",
+      "title": "Verificare aggiornamenti, vecchi piani e installazione pulita.",
+      "verification": null
+    },
+    {
+      "completion": "Checklist desktop reale eseguita con evidenze sintetiche; nessun passaggio simulato dichiarato completo; difetti aperti registrati e risolti prima della release.",
+      "dependencies": [
+        "DATA-004",
+        "SCI-004"
+      ],
+      "id": "REL-001",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T0–T5; tastiera, movimento ridotto, errore rete/provider parziale, mappa offline, selezione posizione, piano → uscita a due canne → pausa/cambio → foto → backup/ripristino → riavvio.",
+      "status": "Not started",
+      "title": "Verificare accessibilità e percorso completo nella WebView Linux.",
+      "verification": null
+    },
+    {
+      "completion": "Build, test, Clippy, formattazione e privacy passano; pacchetto installato e provato con dati sintetici; checksum, limiti e attribuzioni disponibili senza segreti o dati personali.",
+      "dependencies": [
+        "REL-001"
+      ],
+      "id": "REL-002",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T5; toolchain/lockfile e CI aggiornate, build deb, installazione pulita, avvio e migrazione; revisione privacy di repository e artefatti, licenze e istruzioni d'uso concrete.",
+      "status": "Not started",
+      "title": "Costruire e verificare il pacchetto Debian pubblicabile.",
+      "verification": null
+    },
+    {
+      "completion": "Release e pacchetto scaricabili con checksum e istruzioni; prova del pacchetto pubblicato documentata; nessuna funzionalità incompleta presentata come disponibile.",
+      "dependencies": [
+        "REL-002"
+      ],
+      "id": "REL-003",
+      "note": null,
+      "owner": "unassigned",
+      "responsible": "Agent",
+      "scope": "Specifica T5; pubblicare su repository autorizzato solo gli artefatti revisionati e note coerenti con prove e limiti, collegando il tag al commit verificato.",
+      "status": "Not started",
+      "title": "Pubblicare la release Linux verificata.",
+      "verification": null
+    }
+  ]
+}

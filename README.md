@@ -21,3 +21,18 @@ Il diario è salvato nella directory dati dell'applicazione del sistema, fuori d
 Il codice è distribuito con licenza MIT. Diritti e attribuzioni dei contenuti esterni sono verificati separatamente prima della distribuzione.
 
 I pacchetti di ricerca sono documentati in [docs/research-packages.md](docs/research-packages.md).
+
+## Roadmap e sviluppo
+
+Il [backlog unico](roadmap/TODO.md) contiene attività, dipendenze e prove di completamento. La priorità è una proposta automatica di giorno, zona e assetto attraverso servizi ambientali e una mappa utilizzabile. Questa è la direzione di sviluppo, non una funzionalità già completata. Preferenze e inventario saranno riutilizzati; le condizioni manuali rimarranno un percorso facoltativo di osservazione/simulazione.
+
+[Specifiche](docs/implementation-plan.md), [architettura](docs/architecture.md) e [registro dei fatti e delle decisioni](roadmap/docs/master.md) hanno ruoli distinti dal backlog. Per iniziare:
+
+```sh
+python3 scripts/check_roadmap.py
+python3 scripts/check_roadmap.py --ready
+python3 scripts/check_roadmap.py --layers
+python3 -m unittest discover -s tests -v
+```
+
+Richiede Python 3.10+ senza dipendenze aggiuntive. Dopo una modifica al TODO, rigenerare con `python3 scripts/check_roadmap.py --write-graph`, poi validare; non modificare il JSON a mano. Gli hook in `scripts/hooks` controllano roadmap al commit e privacy al push. Il workflow completo è in [AGENTS.md](AGENTS.md).

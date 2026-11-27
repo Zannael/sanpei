@@ -1,6 +1,6 @@
 # Architettura evolutiva di Sanpei
 
-Stato: specifica per la prima implementazione; nessun componente applicativo ancora realizzato.
+Stato: specifica architetturale di riferimento; esiste un prototipo parziale. Stato operativo esclusivamente in `../roadmap/TODO.md`, fatti e decisioni in `../roadmap/docs/master.md`.
 
 ## 1. Moduli e dipendenze
 

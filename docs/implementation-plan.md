@@ -1,4 +1,4 @@
-# Piano operativo Sanpei
+# Sanpei — specifica e criteri di accettazione
 
 ## Scelte confermate
 
@@ -41,84 +41,64 @@ I valori seguenti sono riferimenti iniziali operativi del documento, non limiti 
 
 Le quote hanno origini diverse: attacco piombo per fondo, giunzione terminale per pallini da bolognese. La taratura E/F si verifica con tutto il complesso in acqua: la somma nominale non deve coincidere forzatamente con la portata stampata. Verificare massa totale lanciata e resistenze reali dei componenti, senza certificare sicurezza dal solo diametro.
 
-## Attività ordinate
+## Obiettivo operativo aggiornato
+
+Decisione utente del 27 novembre 2026: il software recupera le condizioni dai servizi e propone quando, dove e come pescare confrontando giorni e zone disponibili. L'utente configura disponibilità, inventario, preferenze e area una volta e può aggiornarli; non deve trascrivere coordinate dei settori, vento, onde o altri dati già disponibili attraverso i servizi. Le osservazioni sul posto e la simulazione restano percorsi distinti. Avviare una pianificazione può avviare il recupero, con informazione sulle coordinate trasmesse e impostazioni persistenti delle connessioni; nessun account applicativo o server obbligatorio.
+
+La proposta mostra giorno/finestra, zona sulla mappa, tecnica, montatura, esca, motivazioni, alternative, dati mancanti e controlli all'arrivo. Le disponibilità oltre l'orizzonte reale dei provider restano pianificabili con assenza esplicita di previsioni. L'ordinamento applica regole documentate e vincoli personali, senza percentuali di cattura o soglie inventate. Il satellite è un livello cartografico con fonte e diritti verificati, non una prova di habitat, accessibilità o pescosità.
+
+## Requisiti e criteri per fase
+
+Questa sezione definisce il risultato richiesto, non l'ordine operativo o lo stato del lavoro. L'unico backlog è [roadmap/TODO.md](../roadmap/TODO.md). Le attività iniziali includono verifica e completamento del prototipo esistente; non sono dichiarate Done per la sola presenza di codice. La priorità è il percorso completo di pianificazione, poi il completamento del diario e della conservazione. Nessuna fase completa viene dedotta dal numero di attività concluse.
 
 ### T0 — Repository e fondamenta
 
-1. Predisporre esclusioni, licenza MIT del codice, attribuzioni, README, identità Git locale generica e controllo privacy su file e cronologia. Dati applicativi sempre fuori dal checkout.
-2. Ripristinare l'accesso GitHub; verificare il repository `sanpei` nell'account autenticato, creare pubblico se libero, ispezionare se esistente senza sovrascrivere. Nessun push prima della revisione privacy.
-3. Fissare versioni compatibili di toolchain e dipendenze, generare lockfile; introdurre nucleo Rust indipendente e comandi applicativi tipizzati.
-4. Provare finestra Tauri, migrazione SQLite, persistenza dopo riavvio e lettura offline MapLibre/PMTiles limitata alle risorse autorizzate.
-5. Configurare controlli TypeScript, formattazione, Clippy, test e build Linux in CI. Documentare i comandi effettivi.
+Repository pubblico revisionato, esclusioni, identità Git generica, licenza e attribuzioni, dati sempre esterni al checkout. Toolchain e lockfile riproducibili; nucleo Rust indipendente da desktop/rete/database e contratti TypeScript generati. Comandi applicativi e permessi Tauri limitati; nessun filesystem o SQL generico dal frontend. CI con build Linux, TypeScript, test, formattazione, Clippy, privacy e controllo roadmap.
 
-Uscita: finestra reale e mappa offline funzionanti su Linux; dato sintetico persistente dopo riavvio. Non costruire tutte le schermate prima di risolvere questa prova.
+Accettazione: finestra Tauri reale su Linux, migrazioni e dato sintetico riletto dopo riavvio; mappa MapLibre offline e PMTiles locale limitato alle risorse autorizzate. La verifica browser non sostituisce la WebView.
 
-### T1 — Pacchetto Lazio e geografia
+Copertura nel backlog: GOV-001, CORE-001–003, MAP-001, REL-001–002. Le verifiche privacy sono trasversali e richieste prima di pubblicare.
 
-Dipende da T0. Definire schemi e registro parametri prima di popolare dati.
+### T1 — Contenuti e geografia
 
-1. Estrarre affermazioni e fonti dalla ricerca, assegnare identificativi e provenienza, distinguere evidenza e suggerimento operativo.
-2. Trascrivere integralmente montature A–F e varianti, con controllo misure e unità. Verificare diritti dei materiali da distribuire.
-3. Implementare validazione e attivazione transazionale, conservazione delle versioni, controllo capacità e anteprima dei cambiamenti.
-4. Verificare geometrie di settori/località/punti con fonti cartografiche; tenere sospesa l'anomalia A002. Non sostituire postazioni mancanti con marker imprecisi non etichettati.
-5. Realizzare Italia → regione → settore → località → punto/tratto, Lazio selezionato, altre regioni indisponibili, breadcrumb e animazioni interrompibili con movimento ridotto.
-6. Includere base, stile, caratteri e attribuzioni offline con licenze verificate. Immagini aeree solo con provenienza e diritti disponibili.
+Pacchetti versionati con affermazioni, fonti, evidenze, parametri, geometrie, cataloghi e regole dichiarative; validazione transazionale, anteprima dei cambiamenti e compatibilità delle capacità. Montature A–F complete di misure, varianti e cautele, con disegni originali guidati dai dati e revisione dei diritti. Geometrie di regioni/settori/località/punti o tratti verificate; centri rappresentativi e punti candidati distinti dalle postazioni verificate. A002 sospeso finché irrisolto.
 
-Uscita: catalogo reale revisionato e navigazione con precisione geografica dichiarata. Raccomandazioni geografiche reali solo nei tratti verificati; elementi sospesi visibili come tali.
+Accettazione: navigazione Italia → regione → settore → località → punto/tratto con Lazio iniziale, altre regioni indisponibili, breadcrumb, animazioni interrompibili e movimento ridotto. Schede e mappa si selezionano reciprocamente e mostrano precisione, provenienza, limiti e revisione. Base e attribuzioni offline; satellite/ortofoto con fonte, data disponibile e diritti verificati. Raccomandazioni geografiche solo nell'ambito verificato.
+
+Copertura nel backlog: SRC-001, GEO-001–003, MAP-001–003, SCI-001–004, ACCEPT-001.
 
 ### T2 — Diario offline
 
-Dipende da T0 e contratti del dominio; il completamento geografico di T1 non impedisce posizioni personali.
+Uscite, canne, intervalli, assetti, pause, osservazioni, catture, esiti, fotografie e partecipanti facoltativi. Posizioni da catalogo, mappa, coordinate o geolocalizzazione, con origine e accuratezza; postazione distinta da zona di lancio. Identificazione incerta e misure stimate/misurate, rilascio e trattenimento, numero ami e parametri aggiuntivi con definizioni versionate. Nuove misure non rendono incompleti i vecchi dati.
 
-1. Uscite, canne, intervalli con assetto, pause, osservazioni, catture, esiti e allegati locali.
-2. Posizioni da catalogo, mappa, coordinate e geolocalizzazione disponibile; origine, accuratezza e zona di lancio separate.
-3. Vincoli sugli intervalli della stessa canna, cambi assetto atomici e due canne contemporanee.
-4. Misure stimate/misurate, identificazioni incerte, rilasci, trattenimenti, numero ami e sforzo nominale/efficace distinguibili.
-5. Campi aggiuntivi validati con definizioni versionate; una futura misura non rende incompleti i vecchi record.
+Accettazione: una stessa canna non ha intervalli sovrapposti, due canne possono essere contemporanee e il cambio assetto è atomico. Catture, cappotto esplicito e registrazione incompleta restano distinti; ore-canna nominali ed effettive non si confondono, e mancanze non diventano zero. Un'uscita con pausa, cambio esca e foto si conserva dopo riavvio senza rete; gli indicatori descrittivi richiedono dati sufficienti.
 
-Uscita: uscita a due canne con pausa e cambio esca, esito esplicito e allegato ricostruita dopo riavvio, senza rete.
+Copertura nel backlog: DIARY-001–004, PLAN-005–006, DATA-001–004, REL-001.
 
 ### T3 — Ambiente e simulazione
 
-Dipende dai contratti di T0/T1.
+Adattatori separati Open-Meteo meteo/mare con termini e attribuzioni verificati, HTTP sostituibile nei test, timeout, cancellazione, dati parziali e cache persistente. Contratto normalizzato con unità, direzioni, coordinate richieste/restituite, validità, recupero ed emissione se disponibile; orizzonti separati per variabile. Recupero coordinato per le zone selezionate, senza trascrizione manuale e senza invio implicito di posizioni personali. Sole e fase lunare locali con libreria verificata; nessun beneficio di cattura attribuito alla sola luna.
 
-1. Adattatori Open-Meteo meteo e mare, richieste esplicite, informazione sulle coordinate trasmesse, timeout e cache persistente.
-2. Unità e direzioni normalizzate; provenienza, coordinate restituite, validità, recupero e orizzonti separati per variabile.
-3. Astronomia locale con libreria verificata; nessun punteggio dominante sulla luna.
-4. Dati modellistici, osservati e simulati distinguibili; nessun meteo inventato oltre l'orizzonte disponibile.
-5. Test su provider simulati per timeout, risposta parziale e assenza dati; attribuzioni e condizioni d'uso verificate.
+Accettazione: provider simulati provano timeout, errori HTTP, campi mancanti e copertura parziale; una prova live distinta conferma l'integrazione. Offline la cache mostra la data di recupero; oltre l'orizzonte non viene inventato meteo. Osservazione, previsione e simulazione restano distinte fino allo snapshot.
 
-Uscita: condizioni consultabili da cache offline con data visibile e pianificazione futura possibile anche senza previsione disponibile.
+Copertura nel backlog: SRC-001, ENV-001–005, PLAN-002, ACCEPT-001.
 
-### T4 — Pianificatore e diagnosi
+### T4 — Pianificatore e adattamento
 
-Dipende da T1 e T3; integrazione col diario dipende da T2.
+Disponibilità di giorni/fasce, zone/raggio, inventario, specie quando supportata dalla ricerca, preferenze e scelte bloccate sono persistenti. Il software genera candidati multi-giorno/multi-zona usando le condizioni recuperate, poi applica regole Rust deterministiche. Compatibilità non dimostrabile resta da verificare, inclusi peso totale lanciato e resistenze dei componenti. Non sono previsti tempi stradali. Risultati motivati e alternativi con dati mancanti; nessuna classifica numerica priva di base documentata.
 
-1. Input con fascia oraria, zona/raggio, inventario, bersagli, preferenze e scelte bloccate. Nessuna stima di viaggio stradale.
-2. Regole Rust deterministiche e spiegabili con compatibilità documentata, conoscenza insufficiente esplicita, alternative e controlli all'arrivo.
-3. Applicare le correzioni della ricerca a esca assente, grovigli, deriva, sottotaglia e passata instabile; non trasformare ipotesi diagnostiche in cause certe.
-4. Salvare snapshot immutabili con valori effettivi e versioni; rivalutare creando una revisione e mostrare le differenze.
-5. Collegare piano e uscita e annotare se i consigli sono stati seguiti. Niente percentuali di cattura.
+Accettazione: con configurazione salvata, una pianificazione propone giorno, fascia, zona, tecnica, montatura ed esca senza digitare condizioni o coordinate. Se non ci sono candidati, spiega vincoli e mancanze. Salva snapshot immutabili di input, condizioni, geometrie, cataloghi, motore e risultati; crea uscita collegata e registra consiglio seguito. Correzioni sul posto per esca, grovigli, deriva, sottotaglia e passata producono nuova valutazione con differenze motivate, senza trasformare ipotesi in cause certe.
 
-Uscita: scenari riproducibili, vincoli rispettati, vecchio piano invariato dopo nuova ricerca e adattamento sul posto.
+Copertura nel backlog: CORE-002–003, SCI-002–003, PLAN-001–006, ACCEPT-001.
 
 ### T5 — Conservazione e release Linux
 
-Dipende da T1–T4.
+Esportazioni JSON complete, CSV per analisi e GeoJSON con definizioni e riferimenti storici. Backup versionato con database coerente via VACUUM INTO, allegati, manifest e checksum; mutazioni sospese durante la preparazione. Ripristino in area temporanea con controlli di integrità, schema, riferimenti e percorsi; sostituzione controllata e copia di recupero precedente.
 
-1. Esportazioni JSON complete, CSV per analisi e GeoJSON; includere definizioni dei parametri e riferimenti storici necessari.
-2. Backup database coerente con `VACUUM INTO`, allegati, pacchetti referenziati e manifest/checksum; sospendere modifiche durante la preparazione.
-3. Ripristino in area temporanea, verifica integrità/schema/riferimenti, sostituzione controllata e copia di recupero dei dati precedenti.
-4. Provare migrazione di database precedente, importazione di una nuova ricerca e consultazione dei vecchi piani.
-5. Build `.deb`, prova su installazione pulita, revisione privacy degli artefatti e pubblicazione della release verificata.
+Accettazione: file corrotti, versioni incompatibili e riferimenti invalidi non danneggiano dati correnti. Installazione pulita ricostruisce diario, fotografie e piani anche dopo aggiornamento dei contenuti. Pacchetto Debian installato e provato, verifica privacy di repository e artefatti, release con checksum, istruzioni e limiti documentati.
 
-Uscita: dati e piani ricostruiti su installazione pulita con allegati e contenuti storici; nessuna perdita in ripristini falliti.
+Copertura nel backlog: DATA-001–004, REL-001–003.
 
-## Verifiche trasversali
+## Verifica trasversale
 
-- Intervalli e ore-canna: sovrapposizioni, pause, doppia canna, cambio ora, zero e dato mancante.
-- Ricerca: misure A–F, origini delle quote, somme E/F, geometrie sospese, diritti e fonti.
-- Aggiornamenti: nuovo parametro senza nuova colonna, regola revisionata, capacità sconosciuta, unità errata, mancata attivazione senza danni.
-- Storico: snapshot invariati, definizioni precedenti leggibili, esportazione e ripristino dopo aggiornamenti.
-- Desktop reale: rete assente, mappa, riavvio e percorso piano → uscita → diario.
-- Privacy: file, commit, allegati, screenshot e log prima della pubblicazione.
+I criteri comprendono doppia canna e cambio dell'ora, assenza/zero/stima, misure A–F e origini delle quote, geometrie sospese, fonti e diritti, aggiornamento con nuovo parametro senza colonna, unità incompatibile e capacità sconosciuta, storico immutato dopo aggiornamento e ripristino, rete assente e flusso desktop piano → uscita → diario. Ogni Done nel backlog registra prove reali e limiti; la validazione strutturale del TODO non prova il funzionamento dell'app.
